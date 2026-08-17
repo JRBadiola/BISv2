@@ -268,5 +268,9 @@ $routes->group('/sk', ['filter' => ['auth', 'role:sk']], function ($routes) {
     $routes->post('settings/verify-otp',      'SettingsController::verifyPasswordOtp');
     $routes->post('settings/change-password', 'SettingsController::changePassword');
     $routes->post('settings/profile',         'SettingsController::updateProfile');
-    $routes->post('settings/avatar',          'SettingsController::uploadAvatar');
+    $routes->post('settings/avatar',          'SettingsController::uploadAvatar');	
+	
 });
+
+$routes->get('test-env', 'TestEnv::index');
+$routes->get('test-openrouter', 'ChatbotController::testOpenRouter');

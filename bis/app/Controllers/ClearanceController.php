@@ -20,355 +20,1689 @@ class ClearanceController extends BaseController
         $this->model = new ClearanceRequestModel();
     }
 
-    // ── Resident: show clearance page ─────────────────────────────────────────
+    /*
+    |--------------------------------------------------------------------------
+    | RESIDENT / SK - CLEARANCE PAGE
+    |--------------------------------------------------------------------------
+    */
 
     public function residentIndex()
     {
-        $userId    = (int) session()->get('user_id');
+        $userId = (int) session()->get('user_id');
+
+        if ($userId <= 0) {
+            return redirect()->to('/login');
+        }
+
         $userModel = new UserModel();
-        $user      = $userModel->find($userId);
+        $user = $userModel->find($userId);
 
-        // Load household members for the "for whom" dropdown
+        if (!$user) {
+            return redirect()->to('/login')
+                ->with('error', 'User account not found.');
+        }
+
         $members = [];
-        $householdTotalIncome = 0;
-        $occupation = '';   // household head's occupation for FTJS eligibility
+        $householdTotalIncome = 0.0;
+        $occupation = '';
 
-        if (! empty($user['household_no'])) {
-            $hm      = new HouseholdModel();
-            $head    = $hm->find($user['household_no']);
-            $memModel = new HouseholdMemberModel();
-            $rawMembers = $memModel->where('household_no', $user['household_no'])->findAll();
+        /*
+        |--------------------------------------------------------------------------
+        | Load household information
+        |--------------------------------------------------------------------------
+        */
+
+        if (!empty($user['household_no'])) {
+
+            $householdModel = new HouseholdModel();
+
+            $head = $householdModel->find(
+                $user['household_no']
+            );
+
+            $memberModel = new HouseholdMemberModel();
+
+            $rawMembers = $memberModel
+                ->where(
+                    'household_no',
+                    $user['household_no']
+                )
+                ->findAll();
+
+            /*
+            |--------------------------------------------------------------------------
+            | Household Head
+            |--------------------------------------------------------------------------
+            */
 
             if ($head) {
+
                 $members[] = [
-                    'name'         => trim($head['first_name'] . ' ' . $head['last_name']),
-                    'relationship' => 'Household Head',
+                    'name' =>
+                        trim(
+                            ($head['first_name'] ?? '') .
+                            ' ' .
+                            ($head['last_name'] ?? '')
+                        ),
+
+                    'relationship' =>
+                        'Household Head',
                 ];
-                $householdTotalIncome += (float) ($head['monthly_income'] ?? 0);
-                $occupation = $head['occupation'] ?? '';
+
+                $householdTotalIncome +=
+                    (float) (
+                        $head['monthly_income'] ?? 0
+                    );
+
+                $occupation =
+                    trim(
+                        $head['occupation'] ?? ''
+                    );
             }
-            foreach ($rawMembers as $m) {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Household Members
+            |--------------------------------------------------------------------------
+            */
+
+            foreach ($rawMembers as $member) {
+
                 $members[] = [
-                    'name'         => trim($m['first_name'] . ' ' . $m['last_name']),
-                    'relationship' => ucfirst($m['relationship']),
+                    'name' =>
+                        trim(
+                            ($member['first_name'] ?? '') .
+                            ' ' .
+                            ($member['last_name'] ?? '')
+                        ),
+
+                    'relationship' =>
+                        ucfirst(
+                            trim(
+                                $member['relationship'] ?? ''
+                            )
+                        ),
                 ];
-                $householdTotalIncome += (float) ($m['monthly_income'] ?? 0);
+
+                $householdTotalIncome +=
+                    (float) (
+                        $member['monthly_income'] ?? 0
+                    );
             }
         }
 
-        // Determine if the resident is employed (blocks FTJS)
-        $isEmployed = ! empty($occupation)
-            && strtolower(trim($occupation)) !== 'none'
-            && strtolower(trim($occupation)) !== 'n/a'
-            && strtolower(trim($occupation)) !== 'unemployed'
-            && strtolower(trim($occupation)) !== 'student'
-            && strtolower(trim($occupation)) !== 'out-of-school'
-            && ! empty(trim($occupation));
+        /*
+        |--------------------------------------------------------------------------
+        | Determine Employment Status
+        |--------------------------------------------------------------------------
+        |
+        | Used for Certificate of Indigency / FTJS eligibility.
+        |
+        */
 
-        $requests = $this->model->getByUser($userId);
+        $occupationLower =
+            strtolower(
+                trim($occupation)
+            );
 
-        return view('dashboard/resident/clearance', [
-            'requests'             => $requests,
-            'members'              => $members,
-            'user'                 => $user,
-            'householdTotalIncome' => $householdTotalIncome,
-            'occupation'           => $occupation,
-            'isEmployed'           => $isEmployed,
+        $isEmployed =
+            $occupationLower !== '' &&
+            !in_array(
+                $occupationLower,
+                [
+                    'none',
+                    'n/a',
+                    'unemployed',
+                    'student',
+                    'out-of-school',
+                    'out of school',
+                ],
+                true
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | User Requests
+        |--------------------------------------------------------------------------
+        */
+
+        $requests =
+            $this->model->getByUser(
+                $userId
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | View
+        |--------------------------------------------------------------------------
+        */
+
+        $role = session()->get('role');
+
+        $view =
+            $role === 'sk'
+                ? 'dashboard/sk/clearance'
+                : 'dashboard/resident/clearance';
+
+        return view($view, [
+            'requests' =>
+                $requests,
+
+            'members' =>
+                $members,
+
+            'user' =>
+                $user,
+
+            'householdTotalIncome' =>
+                $householdTotalIncome,
+
+            'occupation' =>
+                $occupation,
+
+            'isEmployed' =>
+                $isEmployed,
         ]);
     }
 
-    // ── Resident: submit new request ──────────────────────────────────────────
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESIDENT / SK - SUBMIT CLEARANCE REQUEST
+    |--------------------------------------------------------------------------
+    */
 
     public function store()
     {
-        $userId  = (int) session()->get('user_id');
-        $userModel = new UserModel();
-        $user    = $userModel->find($userId);
+        $userId =
+            (int) session()->get('user_id');
 
-        $forMember   = $this->request->getPost('for_member');
-        $memberRel   = $this->request->getPost('member_relationship');
-        $docType     = $this->request->getPost('document_type');
-        $purpose     = trim($this->request->getPost('purpose') ?? '');
-        $notes       = trim($this->request->getPost('notes') ?? '');
-
-        if (empty($forMember) || empty($docType) || empty($purpose)) {
-            return redirect()->back()->with('error', 'Please fill in all required fields.')->withInput();
+        if ($userId <= 0) {
+            return redirect()->to('/login');
         }
 
-        // ── Indigency income qualification check ──────────────────────────────
-        if ($docType === 'Certificate of Indigency' && ! empty($user['household_no'])) {
-            $hm          = new HouseholdModel();
-            $head        = $hm->find($user['household_no']);
-            $memModel    = new HouseholdMemberModel();
-            $members     = $memModel->where('household_no', $user['household_no'])->findAll();
+        /*
+        |--------------------------------------------------------------------------
+        | User
+        |--------------------------------------------------------------------------
+        */
 
-            $headIncome   = (float) ($head['monthly_income'] ?? 0);
-            $memberIncome = array_sum(array_column($members, 'monthly_income'));
-            $totalIncome  = $headIncome + $memberIncome;
+        $userModel = new UserModel();
+
+        $user =
+            $userModel->find($userId);
+
+        if (!$user) {
+            return redirect()->back()
+                ->with(
+                    'error',
+                    'User account not found.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Form Data
+        |--------------------------------------------------------------------------
+        */
+
+        $forMember =
+            trim(
+                $this->request->getPost(
+                    'for_member'
+                ) ?? ''
+            );
+
+        $memberRelationship =
+            trim(
+                $this->request->getPost(
+                    'member_relationship'
+                ) ?? ''
+            );
+
+        $documentType =
+            trim(
+                $this->request->getPost(
+                    'document_type'
+                ) ?? ''
+            );
+
+        $purpose =
+            trim(
+                $this->request->getPost(
+                    'purpose'
+                ) ?? ''
+            );
+
+        $notes =
+            trim(
+                $this->request->getPost(
+                    'notes'
+                ) ?? ''
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Required Fields
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            $forMember === '' ||
+            $documentType === '' ||
+            $purpose === ''
+        ) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with(
+                    'error',
+                    'Please fill in all required fields.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Certificate of Indigency Eligibility
+        |--------------------------------------------------------------------------
+        |
+        | Household net monthly income must not exceed ₱12,000.
+        |
+        */
+
+        if (
+            $documentType ===
+            'Certificate of Indigency' &&
+            !empty($user['household_no'])
+        ) {
+
+            $householdModel =
+                new HouseholdModel();
+
+            $head =
+                $householdModel->find(
+                    $user['household_no']
+                );
+
+            $memberModel =
+                new HouseholdMemberModel();
+
+            $householdMembers =
+                $memberModel
+                    ->where(
+                        'household_no',
+                        $user['household_no']
+                    )
+                    ->findAll();
+
+            /*
+            |--------------------------------------------------------------------------
+            | Household Head Income
+            |--------------------------------------------------------------------------
+            */
+
+            $headIncome = 0.0;
+
+            if ($head) {
+                $headIncome =
+                    (float) (
+                        $head['monthly_income'] ?? 0
+                    );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Household Member Income
+            |--------------------------------------------------------------------------
+            */
+
+            $memberIncome = 0.0;
+
+            foreach (
+                $householdMembers
+                as $member
+            ) {
+                $memberIncome +=
+                    (float) (
+                        $member['monthly_income'] ?? 0
+                    );
+            }
+
+            $totalIncome =
+                $headIncome +
+                $memberIncome;
+
+            /*
+            |--------------------------------------------------------------------------
+            | Automatic Rejection
+            |--------------------------------------------------------------------------
+            */
 
             if ($totalIncome > 12000) {
-                // Auto-reject: insert as rejected immediately
-                $this->model->insert([
-                    'user_id'             => $userId,
-                    'household_no'        => $user['household_no'] ?? null,
-                    'for_member'          => $forMember,
-                    'member_relationship' => $memberRel,
-                    'document_type'       => $docType,
-                    'purpose'             => $purpose,
-                    'notes'               => $notes ?: null,
-                    'status'              => 'rejected',
-                    'remarks'             => 'Automatically rejected: household net monthly income of ₱' . number_format($totalIncome, 2) . ' exceeds the ₱12,000.00 indigency threshold.',
-                    'processed_at'        => date('Y-m-d H:i:s'),
-                    'est_release_date'    => null,
-                ]);
 
-                $role = session()->get('role') === 'sk' ? 'sk' : 'resident';
-                return redirect()->to('/' . $role . '/clearance')->with(
-                    'error',
-                    'Your request for a Certificate of Indigency was automatically rejected. ' .
-                        'Your household\'s net monthly income (₱' . number_format($totalIncome, 2) . ') ' .
-                        'exceeds the ₱12,000.00 eligibility threshold.'
-                );
+                $remarks =
+                    'Automatically rejected: household monthly income of ₱' .
+                    number_format(
+                        $totalIncome,
+                        2
+                    ) .
+                    ' exceeds the ₱12,000.00 indigency threshold.';
+
+                $inserted =
+                    $this->model->insert([
+                        'user_id' =>
+                            $userId,
+
+                        'household_no' =>
+                            $user['household_no'] ?? null,
+
+                        'for_member' =>
+                            $forMember,
+
+                        'member_relationship' =>
+                            $memberRelationship,
+
+                        'document_type' =>
+                            $documentType,
+
+                        'purpose' =>
+                            $purpose,
+
+                        'notes' =>
+                            $notes !== ''
+                                ? $notes
+                                : null,
+
+                        'status' =>
+                            'rejected',
+
+                        'remarks' =>
+                            $remarks,
+
+                        'processed_by' =>
+                            null,
+
+                        'processed_at' =>
+                            date(
+                                'Y-m-d H:i:s'
+                            ),
+
+                        'est_release_date' =>
+                            null,
+                    ]);
+
+                if (!$inserted) {
+
+                    return redirect()
+                        ->back()
+                        ->withInput()
+                        ->with(
+                            'error',
+                            'Unable to process the indigency request.'
+                        );
+                }
+
+                $role =
+                    session()->get('role');
+
+                $role =
+                    $role === 'sk'
+                        ? 'sk'
+                        : 'resident';
+
+                return redirect()
+                    ->to(
+                        '/' .
+                        $role .
+                        '/clearance'
+                    )
+                    ->with(
+                        'error',
+                        'Your request for a Certificate of Indigency was automatically rejected. ' .
+                        'Your household monthly income of ₱' .
+                        number_format(
+                            $totalIncome,
+                            2
+                        ) .
+                        ' exceeds the ₱12,000.00 eligibility threshold.'
+                    );
             }
         }
 
-        // Estimate release: 2 business days from now
-        $estRelease = date('Y-m-d', strtotime('+2 weekdays'));
+        /*
+        |--------------------------------------------------------------------------
+        | Estimated Release Date
+        |--------------------------------------------------------------------------
+        |
+        | Two weekdays from today.
+        |
+        */
 
-        $this->model->insert([
-            'user_id'             => $userId,
-            'household_no'        => $user['household_no'] ?? null,
-            'for_member'          => $forMember,
-            'member_relationship' => $memberRel,
-            'document_type'       => $docType,
-            'purpose'             => $purpose,
-            'notes'               => $notes ?: null,
-            'status'              => 'pending',
-            'est_release_date'    => $estRelease,
-        ]);
+        $estRelease =
+            date(
+                'Y-m-d',
+                strtotime(
+                    '+2 weekdays'
+                )
+            );
 
-        $role = session()->get('role') === 'sk' ? 'sk' : 'resident';
-        return redirect()->to('/' . $role . '/clearance')->with('success', 'Request submitted successfully! Estimated release: ' . date('M d, Y', strtotime($estRelease)));
+        /*
+        |--------------------------------------------------------------------------
+        | Insert Pending Request
+        |--------------------------------------------------------------------------
+        */
+
+        $inserted =
+            $this->model->insert([
+                'user_id' =>
+                    $userId,
+
+                'household_no' =>
+                    $user['household_no'] ?? null,
+
+                'for_member' =>
+                    $forMember,
+
+                'member_relationship' =>
+                    $memberRelationship,
+
+                'document_type' =>
+                    $documentType,
+
+                'purpose' =>
+                    $purpose,
+
+                'notes' =>
+                    $notes !== ''
+                        ? $notes
+                        : null,
+
+                'status' =>
+                    'pending',
+
+                'remarks' =>
+                    null,
+
+                'processed_by' =>
+                    null,
+
+                'processed_at' =>
+                    null,
+
+                'est_release_date' =>
+                    $estRelease,
+            ]);
+
+        if (!$inserted) {
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with(
+                    'error',
+                    'Unable to submit your clearance request. Please try again.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Redirect
+        |--------------------------------------------------------------------------
+        */
+
+        $role =
+            session()->get('role');
+
+        $role =
+            $role === 'sk'
+                ? 'sk'
+                : 'resident';
+
+        return redirect()
+            ->to(
+                '/' .
+                $role .
+                '/clearance'
+            )
+            ->with(
+                'success',
+                'Request submitted successfully! Estimated release: ' .
+                date(
+                    'M d, Y',
+                    strtotime($estRelease)
+                )
+            );
     }
 
-    // ── Admin (captain/secretary): list all requests — grouped by resident ───
+
+    /*
+    |--------------------------------------------------------------------------
+    | CAPTAIN / SECRETARY - CLEARANCE LIST
+    |--------------------------------------------------------------------------
+    */
 
     public function adminIndex(string $role)
     {
-        $db = \Config\Database::connect();
+        /*
+        |--------------------------------------------------------------------------
+        | Validate Role
+        |--------------------------------------------------------------------------
+        */
 
-        // Stats
-        $model    = $this->model;
-        $pending  = $model->where('status', 'pending')->countAllResults();
-        $approved = $model->where('status', 'approved')->countAllResults();
-        $rejected = $model->where('status', 'rejected')->countAllResults();
-        $total    = $model->countAll();
+        if (
+            !in_array(
+                $role,
+                [
+                    'captain',
+                    'secretary',
+                ],
+                true
+            )
+        ) {
+            return redirect()
+                ->to('/login')
+                ->with(
+                    'error',
+                    'Unauthorized access.'
+                );
+        }
 
-        // Filters
-        $statusFilter = $_GET['status'] ?? '';
-        $typeFilter   = $_GET['type']   ?? '';
-        $search       = $_GET['search'] ?? '';
+        $db =
+            \Config\Database::connect();
 
-        // Group by resident (user_id) — show one row per resident with their latest request
-        $builder = $db->table('clearance_requests cr')
-            ->select("
-                cr.user_id,
-                CONCAT(TRIM(COALESCE(u.first_name,'')), ' ', TRIM(COALESCE(u.last_name,''))) AS resident_name,
-                u.username,
-                h.zone,
-                h.address,
-                h.contact_number,
-                COUNT(cr.id) AS total_requests,
-                SUM(cr.status = 'pending')  AS pending_count,
-                SUM(cr.status = 'approved') AS approved_count,
-                SUM(cr.status = 'rejected') AS rejected_count,
-                MAX(cr.created_at) AS latest_filed
-            ")
-            ->join('users u', 'u.id = cr.user_id', 'left')
-            ->join('households h', 'h.household_no = u.household_no', 'left')
-            ->groupBy('cr.user_id')
-            ->orderBy('latest_filed', 'DESC');
+        /*
+        |--------------------------------------------------------------------------
+        | Statistics
+        |--------------------------------------------------------------------------
+        */
+
+        $pending =
+            $this->model
+                ->where(
+                    'status',
+                    'pending'
+                )
+                ->countAllResults();
+
+        $approved =
+            $this->model
+                ->where(
+                    'status',
+                    'approved'
+                )
+                ->countAllResults();
+
+        $rejected =
+            $this->model
+                ->where(
+                    'status',
+                    'rejected'
+                )
+                ->countAllResults();
+
+        $total =
+            $this->model->countAll();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Filters
+        |--------------------------------------------------------------------------
+        */
+
+        $statusFilter =
+            trim(
+                $this->request->getGet(
+                    'status'
+                ) ?? ''
+            );
+
+        $typeFilter =
+            trim(
+                $this->request->getGet(
+                    'type'
+                ) ?? ''
+            );
+
+        $search =
+            trim(
+                $this->request->getGet(
+                    'search'
+                ) ?? ''
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Main Query
+        |--------------------------------------------------------------------------
+        */
+
+        $builder =
+            $db->table(
+                'clearance_requests cr'
+            );
+
+        $builder->select("
+            cr.user_id,
+
+            CONCAT(
+                TRIM(COALESCE(u.first_name, '')),
+                ' ',
+                TRIM(COALESCE(u.last_name, ''))
+            ) AS resident_name,
+
+            u.username,
+
+            h.zone,
+            h.address,
+            h.contact_number,
+
+            COUNT(cr.id) AS total_requests,
+
+            SUM(
+                CASE
+                    WHEN cr.status = 'pending'
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS pending_count,
+
+            SUM(
+                CASE
+                    WHEN cr.status = 'approved'
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS approved_count,
+
+            SUM(
+                CASE
+                    WHEN cr.status = 'rejected'
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS rejected_count,
+
+            MAX(cr.created_at) AS latest_filed
+        ");
+
+        $builder->join(
+            'users u',
+            'u.id = cr.user_id',
+            'left'
+        );
+
+        $builder->join(
+            'households h',
+            'h.household_no = u.household_no',
+            'left'
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Document Type Filter
+        |--------------------------------------------------------------------------
+        */
+
+        if ($typeFilter !== '') {
+
+            $builder->where(
+                'cr.document_type',
+                $typeFilter
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Search
+        |--------------------------------------------------------------------------
+        */
+
+        if ($search !== '') {
+
+            $builder->groupStart();
+
+            $builder->like(
+                'u.first_name',
+                $search
+            );
+
+            $builder->orLike(
+                'u.last_name',
+                $search
+            );
+
+            $builder->orLike(
+                'u.username',
+                $search
+            );
+
+            $builder->groupEnd();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Group By Resident
+        |--------------------------------------------------------------------------
+        */
+
+        $builder->groupBy(
+            'cr.user_id'
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Status Filter
+        |--------------------------------------------------------------------------
+        */
 
         if ($statusFilter !== '') {
-            $builder->having('SUM(cr.status = "' . $db->escapeString($statusFilter) . '") >', 0);
+
+            $safeStatus =
+                $db->escape(
+                    $statusFilter
+                );
+
+            $builder->having(
+                "SUM(
+                    CASE
+                        WHEN cr.status = {$safeStatus}
+                        THEN 1
+                        ELSE 0
+                    END
+                ) > 0",
+                null,
+                false
+            );
         }
-        if ($typeFilter !== '') {
-            $builder->where('cr.document_type', $typeFilter);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Sorting
+        |--------------------------------------------------------------------------
+        */
+
+        $builder->orderBy(
+            'latest_filed',
+            'DESC'
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Pagination
+        |--------------------------------------------------------------------------
+        */
+
+        $perPage = 10;
+
+        $page =
+            max(
+                1,
+                (int) (
+                    $this->request->getGet(
+                        'page'
+                    ) ?? 1
+                )
+            );
+
+        $offset =
+            ($page - 1) *
+            $perPage;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Count Filtered Residents
+        |--------------------------------------------------------------------------
+        */
+
+        $countBuilder =
+            clone $builder;
+
+        $filteredTotal =
+            $countBuilder
+                ->countAllResults();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Get Residents
+        |--------------------------------------------------------------------------
+        */
+
+        $residents =
+            $builder
+                ->limit(
+                    $perPage,
+                    $offset
+                )
+                ->get()
+                ->getResultArray();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Captain Information
+        |--------------------------------------------------------------------------
+        */
+
+        $userModel =
+            new UserModel();
+
+        $captainRow =
+            $userModel
+                ->getActiveByRole(
+                    'captain'
+                );
+
+        $captainName =
+            'PUNONG BARANGAY';
+
+        if ($captainRow) {
+
+            $captainName =
+                strtoupper(
+                    trim(
+                        ($captainRow['first_name'] ?? '') .
+                        ' ' .
+                        ($captainRow['middle_name'] ?? '') .
+                        ' ' .
+                        ($captainRow['last_name'] ?? '')
+                    )
+                );
         }
-        if ($search !== '') {
-            $builder->groupStart()
-                ->like('u.first_name', $search)
-                ->orLike('u.last_name', $search)
-                ->groupEnd();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Document Templates
+        |--------------------------------------------------------------------------
+        */
+
+        $templateModel =
+            new DocumentTemplateModel();
+
+        if (
+            $templateModel->tableExists()
+        ) {
+
+            $templates =
+                $templateModel
+                    ->getTemplatesIndexedByKey();
+
+        } else {
+
+            $templates =
+                $templateModel
+                    ->getDefaultTemplates();
         }
 
-        $perPage       = 10;
-        $page          = (int) ($_GET['page'] ?? 1);
-        $offset        = ($page - 1) * $perPage;
-        $filteredTotal = $builder->countAllResults(false);
-        $residents     = $builder->limit($perPage, $offset)->get()->getResultArray();
+        /*
+        |--------------------------------------------------------------------------
+        | Barangay Settings
+        |--------------------------------------------------------------------------
+        */
 
-        // Fetch active captain name for document signatures
-        $userModel   = new \App\Models\UserModel();
-        $captainRow  = $userModel->getActiveByRole('captain');
-        $captainName = $captainRow
-            ? strtoupper(trim(($captainRow['first_name'] ?? '') . ' ' . ($captainRow['middle_name'] ?? '') . ' ' . ($captainRow['last_name'] ?? '')))
-            : 'PUNONG BARANGAY';
+        $settingsModel =
+            new BarangaySettingsModel();
 
-        $templateModel = new DocumentTemplateModel();
-        $templates     = $templateModel->tableExists()
-            ? $templateModel->getTemplatesIndexedByKey()
-            : $templateModel->getDefaultTemplates();
+        $barangaySettings =
+            $settingsModel->getAll();
 
-        $settingsModel   = new BarangaySettingsModel();
-        $barangaySettings = $settingsModel->getAll();
-        // getAll() always overrides captain_name with the live appointed captain
-        $captainName = $barangaySettings['captain_name'] ?: $captainName;
+        if (
+            !empty(
+                $barangaySettings['captain_name']
+            )
+        ) {
+            $captainName =
+                $barangaySettings['captain_name'];
+        }
 
-        $viewFile = ($role === 'captain')
-            ? 'dashboard/captain/clearance'
-            : 'dashboard/secretary/clearance';
+        /*
+        |--------------------------------------------------------------------------
+        | View
+        |--------------------------------------------------------------------------
+        */
 
-        return view($viewFile, [
-            'residents'        => $residents,
-            'pending'          => $pending,
-            'approved'         => $approved,
-            'rejected'         => $rejected,
-            'total'            => $total,
-            'filteredTotal'    => $filteredTotal,
-            'perPage'          => $perPage,
-            'currentPage'      => $page,
-            'statusFilter'     => $statusFilter,
-            'typeFilter'       => $typeFilter,
-            'search'           => $search,
-            'captainName'      => $captainName,
-            'templates'        => $templates,
-            'barangaySettings' => $barangaySettings,
-        ]);
+        $viewFile =
+            $role === 'captain'
+                ? 'dashboard/captain/clearance'
+                : 'dashboard/secretary/clearance';
+
+        return view(
+            $viewFile,
+            [
+                'residents' =>
+                    $residents,
+
+                'pending' =>
+                    $pending,
+
+                'approved' =>
+                    $approved,
+
+                'rejected' =>
+                    $rejected,
+
+                'total' =>
+                    $total,
+
+                'filteredTotal' =>
+                    $filteredTotal,
+
+                'perPage' =>
+                    $perPage,
+
+                'currentPage' =>
+                    $page,
+
+                'statusFilter' =>
+                    $statusFilter,
+
+                'typeFilter' =>
+                    $typeFilter,
+
+                'search' =>
+                    $search,
+
+                'captainName' =>
+                    $captainName,
+
+                'templates' =>
+                    $templates,
+
+                'barangaySettings' =>
+                    $barangaySettings,
+            ]
+        );
     }
 
-    // ── Admin: view all requests for one resident ─────────────────────────────
+
+    /*
+    |--------------------------------------------------------------------------
+    | CAPTAIN / SECRETARY - RESIDENT DETAIL
+    |--------------------------------------------------------------------------
+    */
 
     public function residentDetail(int $userId)
     {
-        $role     = session()->get('role');
-        $db       = \Config\Database::connect();
+        $role =
+            session()->get('role');
 
-        // Get resident info
-        $userModel = new UserModel();
-        $user      = $userModel->find($userId);
-        if (! $user) {
-            return redirect()->to('/' . $role . '/clearance')->with('error', 'Resident not found.');
+        if (
+            !in_array(
+                $role,
+                [
+                    'captain',
+                    'secretary',
+                ],
+                true
+            )
+        ) {
+            return redirect()
+                ->to('/login')
+                ->with(
+                    'error',
+                    'Unauthorized access.'
+                );
         }
 
-        // Get census data
-        $household    = null;
-        $memberRecord = null;
-        if (! empty($user['household_no'])) {
-            $hm        = new HouseholdModel();
-            $household = $hm->find($user['household_no']);
+        $db =
+            \Config\Database::connect();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Resident
+        |--------------------------------------------------------------------------
+        */
+
+        $userModel =
+            new UserModel();
+
+        $user =
+            $userModel->find(
+                $userId
+            );
+
+        if (!$user) {
+
+            return redirect()
+                ->to(
+                    '/' .
+                    $role .
+                    '/clearance'
+                )
+                ->with(
+                    'error',
+                    'Resident not found.'
+                );
         }
 
-        // Get all requests for this resident
-        $requests = $db->table('clearance_requests')
-            ->where('user_id', $userId)
-            ->orderBy('created_at', 'DESC')
-            ->get()->getResultArray();
+        /*
+        |--------------------------------------------------------------------------
+        | Household
+        |--------------------------------------------------------------------------
+        */
 
-        // Fetch active captain name for document signatures
-        $captainRow  = $userModel->getActiveByRole('captain');
-        $captainName = $captainRow
-            ? strtoupper(trim(($captainRow['first_name'] ?? '') . ' ' . ($captainRow['middle_name'] ?? '') . '. ' . ($captainRow['last_name'] ?? '')))
-            : 'PUNONG BARANGAY';
+        $household = null;
 
-        $settingsModel    = new BarangaySettingsModel();
-        $barangaySettings = $settingsModel->getAll();
-        // getAll() always overrides captain_name with the live appointed captain
-        $captainName = $barangaySettings['captain_name'] ?: $captainName;
+        if (
+            !empty(
+                $user['household_no']
+            )
+        ) {
 
-        return view('dashboard/captain/clearance_detail', [
-            'role'             => $role,
-            'user'             => $user,
-            'household'        => $household,
-            'requests'         => $requests,
-            'requestId'        => $userId,
-            'captainName'      => $captainName,
-            'barangaySettings' => $barangaySettings,
-        ]);
+            $householdModel =
+                new HouseholdModel();
+
+            $household =
+                $householdModel->find(
+                    $user['household_no']
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Requests
+        |--------------------------------------------------------------------------
+        */
+
+        $requests =
+            $db
+                ->table(
+                    'clearance_requests'
+                )
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->orderBy(
+                    'created_at',
+                    'DESC'
+                )
+                ->get()
+                ->getResultArray();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Captain
+        |--------------------------------------------------------------------------
+        */
+
+        $captainRow =
+            $userModel
+                ->getActiveByRole(
+                    'captain'
+                );
+
+        $captainName =
+            'PUNONG BARANGAY';
+
+        if ($captainRow) {
+
+            $captainName =
+                strtoupper(
+                    trim(
+                        ($captainRow['first_name'] ?? '') .
+                        ' ' .
+                        ($captainRow['middle_name'] ?? '') .
+                        ' ' .
+                        ($captainRow['last_name'] ?? '')
+                    )
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Barangay Settings
+        |--------------------------------------------------------------------------
+        */
+
+        $settingsModel =
+            new BarangaySettingsModel();
+
+        $barangaySettings =
+            $settingsModel->getAll();
+
+        if (
+            !empty(
+                $barangaySettings['captain_name']
+            )
+        ) {
+            $captainName =
+                $barangaySettings['captain_name'];
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | View
+        |--------------------------------------------------------------------------
+        */
+
+        $viewFile =
+            $role === 'captain'
+                ? 'dashboard/captain/clearance_detail'
+                : 'dashboard/secretary/clearance_detail';
+
+        return view(
+            $viewFile,
+            [
+                'role' =>
+                    $role,
+
+                'user' =>
+                    $user,
+
+                'household' =>
+                    $household,
+
+                'requests' =>
+                    $requests,
+
+                'requestId' =>
+                    $userId,
+
+                'captainName' =>
+                    $captainName,
+
+                'barangaySettings' =>
+                    $barangaySettings,
+            ]
+        );
     }
 
-    // ── Admin: approve a request ──────────────────────────────────────────────
+
+    /*
+    |--------------------------------------------------------------------------
+    | CAPTAIN / SECRETARY - APPROVE
+    |--------------------------------------------------------------------------
+    */
 
     public function approve(int $id)
     {
-        $role = session()->get('role');
-        $req  = $this->model->find($id);
+        $role =
+            session()->get('role');
 
-        $this->model->update($id, [
-            'status'       => 'approved',
-            'processed_by' => session()->get('user_id'),
-            'processed_at' => date('Y-m-d H:i:s'),
-        ]);
+        if (
+            !in_array(
+                $role,
+                [
+                    'captain',
+                    'secretary',
+                ],
+                true
+            )
+        ) {
 
-        // Notify the resident
-        if ($req && ! empty($req['user_id'])) {
-            $estDate = ! empty($req['est_release_date'])
-                ? ' Estimated release: ' . date('M d, Y', strtotime($req['est_release_date'])) . '.'
-                : '';
-            \App\Models\NotificationModel::push(
-                (int) $req['user_id'],
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Unauthorized action.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Find Request
+        |--------------------------------------------------------------------------
+        */
+
+        $request =
+            $this->model->find(
+                $id
+            );
+
+        if (!$request) {
+
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Clearance request not found.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Prevent Invalid Approval
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            ($request['status'] ?? '') ===
+            'rejected'
+        ) {
+
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'A rejected request cannot be approved.'
+                );
+        }
+
+        if (
+            ($request['status'] ?? '') ===
+            'approved'
+        ) {
+
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'This request has already been approved.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Update
+        |--------------------------------------------------------------------------
+        */
+
+        $updated =
+            $this->model->update(
+                $id,
+                [
+                    'status' =>
+                        'approved',
+
+                    'processed_by' =>
+                        session()->get(
+                            'user_id'
+                        ),
+
+                    'processed_at' =>
+                        date(
+                            'Y-m-d H:i:s'
+                        ),
+                ]
+            );
+
+        if (!$updated) {
+
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Unable to approve the request.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Notify Resident
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !empty(
+                $request['user_id']
+            )
+        ) {
+
+            $estimatedRelease = '';
+
+            if (
+                !empty(
+                    $request[
+                        'est_release_date'
+                    ]
+                )
+            ) {
+
+                $estimatedRelease =
+                    ' Estimated release: ' .
+                    date(
+                        'M d, Y',
+                        strtotime(
+                            $request[
+                                'est_release_date'
+                            ]
+                        )
+                    ) .
+                    '.';
+            }
+
+            NotificationModel::push(
+
+                (int)
+                    $request['user_id'],
+
                 'clearance_approved',
-                'Request Approved — ' . $req['document_type'],
-                'Your ' . $req['document_type'] . ' request has been approved.' . $estDate . ' You may pick it up at the barangay hall during office hours.',
+
+                'Request Approved — ' .
+                (
+                    $request[
+                        'document_type'
+                    ] ??
+                    'Clearance'
+                ),
+
+                'Your ' .
+                (
+                    $request[
+                        'document_type'
+                    ] ??
+                    'clearance'
+                ) .
+                ' request has been approved.' .
+                $estimatedRelease .
+                ' You may pick it up at the barangay hall during office hours.',
+
                 '/resident/clearance'
             );
         }
 
-        return redirect()->back()->with('success', 'Request approved.');
+        return redirect()
+            ->back()
+            ->with(
+                'success',
+                'Request approved.'
+            );
     }
 
-    // ── Admin: reject a request ───────────────────────────────────────────────
+
+    /*
+    |--------------------------------------------------------------------------
+    | CAPTAIN / SECRETARY - REJECT
+    |--------------------------------------------------------------------------
+    */
 
     public function reject(int $id)
     {
-        $role    = session()->get('role');
-        $remarks = $this->request->getPost('remarks') ?? '';
-        $req     = $this->model->find($id);
+        $role =
+            session()->get('role');
 
-        $this->model->update($id, [
-            'status'       => 'rejected',
-            'remarks'      => $remarks,
-            'processed_by' => session()->get('user_id'),
-            'processed_at' => date('Y-m-d H:i:s'),
-        ]);
+        if (
+            !in_array(
+                $role,
+                [
+                    'captain',
+                    'secretary',
+                ],
+                true
+            )
+        ) {
 
-        // Notify the resident
-        if ($req && ! empty($req['user_id'])) {
-            $reasonPart = $remarks ? ' Reason: ' . $remarks : '';
-            \App\Models\NotificationModel::push(
-                (int) $req['user_id'],
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Unauthorized action.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Find Request
+        |--------------------------------------------------------------------------
+        */
+
+        $request =
+            $this->model->find(
+                $id
+            );
+
+        if (!$request) {
+
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Clearance request not found.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Prevent Rejecting Already Rejected
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            ($request['status'] ?? '') ===
+            'rejected'
+        ) {
+
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'This request has already been rejected.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Remarks
+        |--------------------------------------------------------------------------
+        */
+
+        $remarks =
+            trim(
+                $this->request->getPost(
+                    'remarks'
+                ) ?? ''
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Update
+        |--------------------------------------------------------------------------
+        */
+
+        $updated =
+            $this->model->update(
+                $id,
+                [
+                    'status' =>
+                        'rejected',
+
+                    'remarks' =>
+                        $remarks !== ''
+                            ? $remarks
+                            : null,
+
+                    'processed_by' =>
+                        session()->get(
+                            'user_id'
+                        ),
+
+                    'processed_at' =>
+                        date(
+                            'Y-m-d H:i:s'
+                        ),
+                ]
+            );
+
+        if (!$updated) {
+
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Unable to reject the request.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Notify Resident
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !empty(
+                $request['user_id']
+            )
+        ) {
+
+            $reason = '';
+
+            if ($remarks !== '') {
+                $reason =
+                    ' Reason: ' .
+                    $remarks;
+            }
+
+            NotificationModel::push(
+
+                (int)
+                    $request['user_id'],
+
                 'clearance_rejected',
-                'Request Not Approved — ' . $req['document_type'],
-                'Your ' . $req['document_type'] . ' request could not be approved.' . $reasonPart . ' Please visit the barangay hall for assistance.',
+
+                'Request Not Approved — ' .
+                (
+                    $request[
+                        'document_type'
+                    ] ??
+                    'Clearance'
+                ),
+
+                'Your ' .
+                (
+                    $request[
+                        'document_type'
+                    ] ??
+                    'clearance'
+                ) .
+                ' request could not be approved.' .
+                $reason .
+                ' Please visit the barangay hall for assistance.',
+
                 '/resident/clearance'
             );
         }
 
-        return redirect()->back()->with('success', 'Request rejected.');
+        return redirect()
+            ->back()
+            ->with(
+                'success',
+                'Request rejected.'
+            );
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESIDENT / SK - CANCEL
+    |--------------------------------------------------------------------------
+    */
 
     public function cancel(int $id)
     {
-        $userId  = (int) session()->get('user_id');
-        $request = $this->model->find($id);
+        $userId =
+            (int) session()->get(
+                'user_id'
+            );
 
-        // Cast DB value to int to avoid strict type mismatch
-        if (! $request || (int)$request['user_id'] !== $userId || $request['status'] !== 'pending') {
-            return redirect()->to('/resident/clearance')->with('error', 'Cannot cancel this request.');
+        if ($userId <= 0) {
+            return redirect()
+                ->to('/login');
         }
 
-        $this->model->delete($id);
-        $role = session()->get('role') === 'sk' ? 'sk' : 'resident';
-        return redirect()->to('/' . $role . '/clearance')->with('success', 'Request cancelled successfully.');
+        /*
+        |--------------------------------------------------------------------------
+        | Find Request
+        |--------------------------------------------------------------------------
+        */
+
+        $request =
+            $this->model->find(
+                $id
+            );
+
+        if (!$request) {
+
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Clearance request not found.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Ownership
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            (int) (
+                $request['user_id'] ?? 0
+            ) !== $userId
+        ) {
+
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'You are not authorized to cancel this request.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Status
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            ($request['status'] ?? '') !==
+            'pending'
+        ) {
+
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Only pending requests can be cancelled.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Delete
+        |--------------------------------------------------------------------------
+        */
+
+        $deleted =
+            $this->model->delete(
+                $id
+            );
+
+        if (!$deleted) {
+
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Unable to cancel the request.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Redirect
+        |--------------------------------------------------------------------------
+        */
+
+        $role =
+            session()->get('role');
+
+        $role =
+            $role === 'sk'
+                ? 'sk'
+                : 'resident';
+
+        return redirect()
+            ->to(
+                '/' .
+                $role .
+                '/clearance'
+            )
+            ->with(
+                'success',
+                'Request cancelled successfully.'
+            );
     }
 }
