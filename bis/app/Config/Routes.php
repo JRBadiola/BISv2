@@ -274,3 +274,4 @@ $routes->group('/sk', ['filter' => ['auth', 'role:sk']], function ($routes) {
 
 $routes->get('test-env', 'TestEnv::index');
 $routes->get('test-openrouter', 'ChatbotController::testOpenRouter');
+$routes->get('test-email', 'EmailTestController::index');
