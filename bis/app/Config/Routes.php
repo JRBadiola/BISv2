@@ -23,6 +23,8 @@ $routes->get('/terms',          'UIController::terms_of_use');
 
 // Public chatbot API (for residents without login)
 $routes->post('/api/chatbot/chat',        'ChatbotController::chat');
+$routes->get('/api/chatbot/history',     'ChatbotController::getHistory');
+$routes->get('/api/chatbot/conversation/(:num)', 'ChatbotController::getConversation/$1');
 $routes->post('/api/chatbot/save-log',    'ChatbotController::saveLog');
 $routes->get('/api/chatbot/logs',         'ChatbotController::getLogs');
 

@@ -59,12 +59,24 @@
                 <button
                     type="button"
                     class="cw-hbtn"
-                    title="Minimize"
-                    onclick="cwOpen()">
+                    title="New conversation"
+                    onclick="cwNewChat()">
 
-                    <i class="fas fa-minus"></i>
+                    <i class="fas fa-plus"></i>
 
                 </button>
+
+                <button
+                    type="button"
+                    class="cw-hbtn"
+                    title="Recent conversations"
+                    onclick="cwToggleHistory()">
+
+                    <i class="fas fa-history"></i>
+
+                </button>
+
+                
 
                 <button
                     type="button"
@@ -80,6 +92,17 @@
 
         </div>
 
+
+
+        <div class="cw-history-panel" id="cwHistoryPanel" hidden>
+            <div class="cw-history-title">
+                <span>Recent conversations</span>
+                <button type="button" class="cw-history-close" onclick="cwToggleHistory()">×</button>
+            </div>
+            <div class="cw-history-list" id="cwHistoryList">
+                <div class="cw-history-empty">No saved conversations yet.</div>
+            </div>
+        </div>
 
         <!-- Date Divider -->
         <div class="cw-date-divider">
@@ -406,6 +429,87 @@
         margin-bottom: 5px;
     }
 
+
+    /* ========================================================
+       PERSISTENT CHAT HISTORY
+       ======================================================== */
+
+    .cw-history-panel {
+        position: absolute;
+        top: 64px;
+        left: 0;
+        right: 0;
+        z-index: 20;
+        background: #fff;
+        border-bottom: 1px solid rgba(0,0,0,.08);
+        box-shadow: 0 8px 24px rgba(0,0,0,.10);
+        max-height: 330px;
+        overflow: hidden;
+    }
+
+    .cw-history-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        border-bottom: 1px solid rgba(0,0,0,.06);
+    }
+
+    .cw-history-close {
+        border: 0;
+        background: transparent;
+        font-size: 20px;
+        cursor: pointer;
+        line-height: 1;
+    }
+
+    .cw-history-list {
+        max-height: 275px;
+        overflow-y: auto;
+        padding: 6px;
+    }
+
+    .cw-history-item {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        text-align: left;
+        padding: 10px 11px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-bottom: 2px;
+    }
+
+    .cw-history-item:hover,
+    .cw-history-item.active {
+        background: rgba(91,111,214,.08);
+    }
+
+    .cw-history-item-title {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .cw-history-item-date {
+        display: block;
+        margin-top: 3px;
+        font-size: 10px;
+        opacity: .60;
+    }
+
+    .cw-history-empty {
+        padding: 18px 10px;
+        text-align: center;
+        font-size: 12px;
+        opacity: .65;
+    }
+
 </style>
 
 
@@ -424,6 +528,11 @@
        ======================================================== */
 
     const CHAT_ENDPOINT = '/api/chatbot/chat';
+    const CHAT_HISTORY_ENDPOINT = '/api/chatbot/history';
+    const CHAT_CONVERSATION_ENDPOINT = '/api/chatbot/conversation';
+
+    let conversationId = null;
+    let chatHistoryLoaded = false;
 
 
     /* ========================================================
@@ -948,6 +1057,282 @@
        SEND MESSAGE TO OPENROUTER RAG
        ======================================================== */
 
+
+    /* ========================================================
+       LOAD PERSISTENT CHAT HISTORY
+       ======================================================== */
+
+    async function loadChatHistory() {
+
+        if (chatHistoryLoaded) {
+            return;
+        }
+
+        chatHistoryLoaded = true;
+
+        try {
+            const response = await fetch(
+                CHAT_HISTORY_ENDPOINT,
+                {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+
+            if (!data || !data.success || !data.authenticated) {
+                return;
+            }
+
+            renderConversationList(data.conversations || []);
+
+            if (data.active_conversation_id) {
+                conversationId = Number(data.active_conversation_id);
+                renderStoredMessages(data.messages || []);
+            }
+
+        } catch (error) {
+            console.warn('Could not load BIS chat history:', error);
+        }
+    }
+
+
+    function renderConversationList(conversations) {
+
+        document.__cwConversations = conversations || [];
+
+        const list = document.getElementById('cwHistoryList');
+
+        if (!list) {
+            return;
+        }
+
+        list.innerHTML = '';
+
+        if (!conversations.length) {
+
+            list.innerHTML =
+                '<div class="cw-history-empty">' +
+                'No saved conversations yet.' +
+                '</div>';
+
+            return;
+        }
+
+        conversations.forEach(function (conversation) {
+
+            const button = document.createElement('button');
+
+            button.type = 'button';
+            button.className = 'cw-history-item';
+
+            if (
+                conversationId !== null &&
+                Number(conversation.id) === Number(conversationId)
+            ) {
+                button.classList.add('active');
+            }
+
+            const title = document.createElement('span');
+            title.className = 'cw-history-item-title';
+            title.textContent =
+                conversation.title || 'Conversation';
+
+            const date = document.createElement('span');
+            date.className = 'cw-history-item-date';
+
+            date.textContent =
+                conversation.updated_at ||
+                conversation.created_at ||
+                '';
+
+            button.appendChild(title);
+            button.appendChild(date);
+
+            button.addEventListener('click', function () {
+                loadConversation(Number(conversation.id));
+            });
+
+            list.appendChild(button);
+        });
+    }
+
+
+    async function loadConversation(id) {
+
+        try {
+
+            const response = await fetch(
+                CHAT_CONVERSATION_ENDPOINT + '/' + encodeURIComponent(id),
+                {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+
+            if (!data || !data.success) {
+                return;
+            }
+
+            conversationId = Number(id);
+
+            renderStoredMessages(data.messages || []);
+
+            const panel =
+                document.getElementById('cwHistoryPanel');
+
+            if (panel) {
+                panel.hidden = true;
+            }
+
+            renderConversationList(
+                document.__cwConversations || []
+            );
+
+        } catch (error) {
+            console.error('Could not load BIS conversation:', error);
+        }
+    }
+
+
+    function renderStoredMessages(messages) {
+
+        const wrap =
+            document.getElementById('cwMessages');
+
+        if (!wrap) {
+            return;
+        }
+
+        /*
+         * Clear the temporary greeting/chips and rebuild the selected
+         * conversation from the database.
+         */
+        wrap.innerHTML = '';
+
+        if (!messages.length) {
+            addMsg(
+                "Hello! I'm the BIS Assistant 👋\n\nHow can I help you today?",
+                false
+            );
+            return;
+        }
+
+        messages.forEach(function (item) {
+
+            addMsg(
+                item.message || '',
+                item.sender === 'user'
+            );
+
+        });
+
+        wrap.scrollTop = wrap.scrollHeight;
+    }
+
+
+    window.cwToggleHistory = function () {
+
+        const panel =
+            document.getElementById('cwHistoryPanel');
+
+        if (!panel) {
+            return;
+        }
+
+        panel.hidden = !panel.hidden;
+
+        if (!panel.hidden) {
+            loadChatHistory();
+        }
+    };
+
+
+    window.cwNewChat = function () {
+
+        conversationId = null;
+
+        const panel =
+            document.getElementById('cwHistoryPanel');
+
+        if (panel) {
+            panel.hidden = true;
+        }
+
+        const wrap =
+            document.getElementById('cwMessages');
+
+        if (wrap) {
+            wrap.innerHTML = '';
+
+            addMsg(
+                "Hello! I'm the BIS Assistant 👋\n\nHow can I help you today?",
+                false
+            );
+
+            /*
+             * Recreate quick-topic chips for the new conversation.
+             */
+            const chips = document.createElement('div');
+
+            chips.className = 'cw-chips';
+            chips.id = 'cwChips';
+
+            chips.innerHTML = `
+                <button type="button" class="cw-chip" onclick="cwQuick('How do I request a barangay clearance?')">
+                    <i class="fas fa-file-alt"></i> Request clearance
+                </button>
+                <button type="button" class="cw-chip" onclick="cwQuick('How do I create an account?')">
+                    <i class="fas fa-user-plus"></i> Create account
+                </button>
+                <button type="button" class="cw-chip" onclick="cwQuick('How do I file a blotter report?')">
+                    <i class="fas fa-book"></i> File blotter
+                </button>
+                <button type="button" class="cw-chip" onclick="cwQuick('What documents can I request?')">
+                    <i class="fas fa-file-contract"></i> Documents
+                </button>
+                <button type="button" class="cw-chip" onclick="cwQuick('What are the office hours?')">
+                    <i class="fas fa-clock"></i> Office hours
+                </button>
+                <button type="button" class="cw-chip" onclick="cwQuick('How do I reset my password?')">
+                    <i class="fas fa-key"></i> Reset password
+                </button>
+            `;
+
+            wrap.appendChild(chips);
+        }
+
+        const input =
+            document.getElementById('cwInput');
+
+        if (input) {
+            input.focus();
+        }
+    };
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadChatHistory();
+    });
+
+
     window.cwSend = async function () {
 
         const inp =
@@ -1026,7 +1411,11 @@
 
                         body:
                             'message=' +
-                            encodeURIComponent(msg)
+                            encodeURIComponent(msg) +
+                            '&conversation_id=' +
+                            encodeURIComponent(
+                                conversationId === null ? '' : conversationId
+                            )
                     }
                 );
 
@@ -1066,6 +1455,14 @@
                 data.success &&
                 data.response
             ) {
+
+                if (
+                    data.conversation_id !== undefined &&
+                    data.conversation_id !== null &&
+                    Number(data.conversation_id) > 0
+                ) {
+                    conversationId = Number(data.conversation_id);
+                }
 
                 addMsg(
                     data.response,
