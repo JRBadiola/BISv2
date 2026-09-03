@@ -9,6 +9,7 @@
 <!-- ============================================================
      FLOATING CHAT WIDGET
      ============================================================ -->
+
 <div class="cw-wrap" id="cwWrap">
 
     <!-- Chat Toggle -->
@@ -29,6 +30,7 @@
     <!-- ========================================================
          CHAT PANEL
          ======================================================== -->
+
     <div class="cw-panel" id="cwPanel">
 
         <!-- Header -->
@@ -42,6 +44,7 @@
                 </div>
 
                 <div class="cw-header-text">
+
                     <span class="cw-header-name">
                         BIS Assistant
                     </span>
@@ -49,6 +52,7 @@
                     <span class="cw-header-sub">
                         Bacolod Barangay · Online
                     </span>
+
                 </div>
 
             </div>
@@ -56,6 +60,7 @@
 
             <div class="cw-header-actions">
 
+                <!-- New Conversation -->
                 <button
                     type="button"
                     class="cw-hbtn"
@@ -66,6 +71,8 @@
 
                 </button>
 
+
+                <!-- Recent Conversations -->
                 <button
                     type="button"
                     class="cw-hbtn"
@@ -76,8 +83,8 @@
 
                 </button>
 
-                
 
+                <!-- Close -->
                 <button
                     type="button"
                     class="cw-hbtn"
@@ -93,26 +100,63 @@
         </div>
 
 
+        <!-- ====================================================
+             RECENT CONVERSATIONS
+             ==================================================== -->
 
-        <div class="cw-history-panel" id="cwHistoryPanel" hidden>
+        <div
+            class="cw-history-panel"
+            id="cwHistoryPanel"
+            hidden>
+
             <div class="cw-history-title">
-                <span>Recent conversations</span>
-                <button type="button" class="cw-history-close" onclick="cwToggleHistory()">×</button>
+
+                <span>
+                    Recent conversations
+                </span>
+
+                <button
+                    type="button"
+                    class="cw-history-close"
+                    onclick="cwToggleHistory()">
+
+                    ×
+
+                </button>
+
             </div>
-            <div class="cw-history-list" id="cwHistoryList">
-                <div class="cw-history-empty">No saved conversations yet.</div>
+
+
+            <div
+                class="cw-history-list"
+                id="cwHistoryList">
+
+                <div class="cw-history-empty">
+                    No saved conversations yet.
+                </div>
+
             </div>
+
         </div>
 
-        <!-- Date Divider -->
+
+        <!-- ====================================================
+             DATE DIVIDER
+             ==================================================== -->
+
         <div class="cw-date-divider">
-            <span>Today</span>
+
+            <span>
+                Today
+            </span>
+
         </div>
 
 
         <!-- ====================================================
              CHAT MESSAGES
              ==================================================== -->
+
         <div
             class="cw-messages"
             id="cwMessages">
@@ -123,6 +167,7 @@
                 <div class="cw-avatar">
                     <i class="fas fa-robot"></i>
                 </div>
+
 
                 <div class="cw-body">
 
@@ -140,6 +185,7 @@
 
                     </div>
 
+
                     <span class="cw-ts">
                         Just now
                     </span>
@@ -152,6 +198,7 @@
             <!-- =================================================
                  QUICK QUESTIONS
                  ================================================= -->
+
             <div
                 class="cw-chips"
                 id="cwChips">
@@ -229,6 +276,7 @@
         <!-- ====================================================
              CHAT INPUT
              ==================================================== -->
+
         <div class="cw-footer">
 
             <div class="cw-input-wrap">
@@ -251,9 +299,12 @@
 
             </div>
 
+
             <p class="cw-powered">
+
                 Powered by
                 <strong>Bacolod BIS</strong>
+
             </p>
 
         </div>
@@ -266,249 +317,347 @@
 <!-- ============================================================
      CHATBOT CSS
      ============================================================ -->
+
 <style>
 
-    /* ========================================================
-       AI RESPONSE
-       ======================================================== */
+/* ============================================================
+   AI RESPONSE
+   ============================================================ */
 
-    .cw-ai-response {
-        width: 100%;
-        box-sizing: border-box;
+.cw-ai-response {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 
-        /*
-         * IMPORTANT:
-         * This allows the text itself to be justified.
-         */
-        text-align: justify !important;
+    text-align: justify !important;
 
-        line-height: 1.65;
+    line-height: 1.65;
 
-        white-space: normal;
+    white-space: normal;
 
-        word-break: normal;
-        overflow-wrap: break-word;
-    }
+    word-break: normal;
 
+    overflow-wrap: anywhere;
+}
 
-    /* Normal paragraphs */
 
-    .cw-ai-response .cw-ai-paragraph {
+/* ============================================================
+   NORMAL PARAGRAPHS
+   ============================================================ */
 
-        display: block;
+.cw-ai-response .cw-ai-paragraph {
+    display: block;
 
-        margin: 0 0 10px 0;
-        padding: 0;
+    margin: 0 0 10px 0;
 
-        text-align: justify !important;
+    padding: 0;
 
-        line-height: 1.65;
-    }
+    text-align: justify !important;
 
+    line-height: 1.65;
+}
 
-    /* Remove margin from last paragraph */
 
-    .cw-ai-response .cw-ai-paragraph:last-child {
-        margin-bottom: 0;
-    }
+.cw-ai-response .cw-ai-paragraph:last-child {
+    margin-bottom: 0;
+}
 
 
-    /* ========================================================
-       NUMBERED STEPS
-       ======================================================== */
+/* ============================================================
+   NUMBERED STEPS
+   ============================================================ */
 
-    .cw-ai-response .cw-ai-steps {
+.cw-ai-response .cw-ai-steps {
+    display: block;
 
-        display: block;
+    margin-top: 10px;
 
-        margin-top: 10px;
-        margin-bottom: 12px;
+    margin-bottom: 12px;
 
-        padding-left: 30px;
+    padding-left: 30px;
 
-        text-align: left !important;
-    }
+    text-align: left !important;
+}
 
 
-    .cw-ai-response .cw-ai-steps li {
+.cw-ai-response .cw-ai-steps li {
+    margin-bottom: 9px;
 
-        margin-bottom: 9px;
+    padding-left: 5px;
 
-        padding-left: 5px;
+    line-height: 1.65;
 
-        line-height: 1.65;
+    text-align: justify !important;
+}
 
-        /*
-         * Text of each step is justified.
-         */
-        text-align: justify !important;
-    }
 
+.cw-ai-response .cw-ai-steps li:last-child {
+    margin-bottom: 0;
+}
 
-    .cw-ai-response .cw-ai-steps li:last-child {
-        margin-bottom: 0;
-    }
 
+/* ============================================================
+   BULLET POINTS
+   ============================================================ */
 
-    /* ========================================================
-       BULLET POINTS
-       ======================================================== */
+.cw-ai-response .cw-ai-bullets {
+    display: block;
 
-    .cw-ai-response .cw-ai-bullet {
+    margin-top: 8px;
 
-        display: block;
+    margin-bottom: 12px;
 
-        margin: 6px 0;
+    padding-left: 30px;
 
-        padding-left: 5px;
+    text-align: left !important;
+}
 
-        line-height: 1.65;
 
-        text-align: justify !important;
-    }
+.cw-ai-response .cw-ai-bullets li {
+    margin-bottom: 8px;
 
+    padding-left: 5px;
 
-    /* ========================================================
-       EMPTY SPACE BETWEEN PARAGRAPHS
-       ======================================================== */
+    line-height: 1.65;
 
-    .cw-ai-response .cw-space {
+    text-align: justify !important;
+}
 
-        display: block;
 
-        height: 7px;
-    }
+.cw-ai-response .cw-ai-bullets li:last-child {
+    margin-bottom: 0;
+}
 
 
-    /* ========================================================
-       BOLD
-       ======================================================== */
+/* ============================================================
+   EMPTY SPACE
+   ============================================================ */
 
-    .cw-ai-response strong {
-        font-weight: 700;
-    }
+.cw-ai-response .cw-space {
+    display: block;
 
+    height: 7px;
+}
 
-    /* ========================================================
-       ITALIC
-       ======================================================== */
-
-    .cw-ai-response em {
-        font-style: italic;
-    }
-
-
-    /* ========================================================
-       LINK
-       ======================================================== */
-
-    .cw-ai-response a {
-        text-decoration: underline;
-    }
-
-
-    /* ========================================================
-       CHAT BUBBLE
-       ======================================================== */
-
-    .cw-bubble.cw-ai-response {
-
-        max-width: 100%;
-
-        box-sizing: border-box;
-
-        overflow-wrap: anywhere;
-    }
-
-
-    /* ========================================================
-       TYPING
-       ======================================================== */
-
-    .cw-typing-row {
-        margin-bottom: 5px;
-    }
-
-
-    /* ========================================================
-       PERSISTENT CHAT HISTORY
-       ======================================================== */
-
-    .cw-history-panel {
-        position: absolute;
-        top: 64px;
-        left: 0;
-        right: 0;
-        z-index: 20;
-        background: #fff;
-        border-bottom: 1px solid rgba(0,0,0,.08);
-        box-shadow: 0 8px 24px rgba(0,0,0,.10);
-        max-height: 330px;
-        overflow: hidden;
-    }
-
-    .cw-history-title {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 12px 14px;
-        font-size: 13px;
-        font-weight: 600;
-        border-bottom: 1px solid rgba(0,0,0,.06);
-    }
-
-    .cw-history-close {
-        border: 0;
-        background: transparent;
-        font-size: 20px;
-        cursor: pointer;
-        line-height: 1;
-    }
-
-    .cw-history-list {
-        max-height: 275px;
-        overflow-y: auto;
-        padding: 6px;
-    }
-
-    .cw-history-item {
-        width: 100%;
-        border: 0;
-        background: transparent;
-        text-align: left;
-        padding: 10px 11px;
-        border-radius: 8px;
-        cursor: pointer;
-        margin-bottom: 2px;
-    }
-
-    .cw-history-item:hover,
-    .cw-history-item.active {
-        background: rgba(91,111,214,.08);
-    }
-
-    .cw-history-item-title {
-        display: block;
-        font-size: 12px;
-        font-weight: 600;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .cw-history-item-date {
-        display: block;
-        margin-top: 3px;
-        font-size: 10px;
-        opacity: .60;
-    }
-
-    .cw-history-empty {
-        padding: 18px 10px;
-        text-align: center;
-        font-size: 12px;
-        opacity: .65;
-    }
+
+/* ============================================================
+   BOLD
+   ============================================================ */
+
+.cw-ai-response strong {
+    font-weight: 700;
+}
+
+
+/* ============================================================
+   ITALIC
+   ============================================================ */
+
+.cw-ai-response em {
+    font-style: italic;
+}
+
+
+/* ============================================================
+   INLINE CODE
+   ============================================================ */
+
+.cw-ai-response code {
+    background: rgba(0, 0, 0, .06);
+
+    color: inherit;
+
+    padding: 2px 5px;
+
+    border-radius: 4px;
+
+    font-size: .9em;
+
+    font-family: monospace;
+}
+
+
+/* ============================================================
+   LINKS
+   ============================================================ */
+
+.cw-ai-response a {
+    text-decoration: underline;
+}
+
+
+/* ============================================================
+   CHAT BUBBLE
+   ============================================================ */
+
+.cw-bubble.cw-ai-response {
+    max-width: 100%;
+
+    box-sizing: border-box;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* ============================================================
+   TYPING
+   ============================================================ */
+
+.cw-typing-row {
+    margin-bottom: 5px;
+}
+
+
+/* ============================================================
+   PERSISTENT CHAT HISTORY
+   ============================================================ */
+
+.cw-history-panel {
+    position: absolute;
+
+    top: 64px;
+
+    left: 0;
+
+    right: 0;
+
+    z-index: 20;
+
+    background: #fff;
+
+    border-bottom: 1px solid rgba(0, 0, 0, .08);
+
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .10);
+
+    max-height: 330px;
+
+    overflow: hidden;
+}
+
+
+.cw-history-title {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 12px 14px;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    border-bottom: 1px solid rgba(0, 0, 0, .06);
+}
+
+
+.cw-history-close {
+    border: 0;
+
+    background: transparent;
+
+    font-size: 20px;
+
+    cursor: pointer;
+
+    line-height: 1;
+}
+
+
+.cw-history-list {
+    max-height: 275px;
+
+    overflow-y: auto;
+
+    padding: 6px;
+}
+
+
+.cw-history-item {
+    width: 100%;
+
+    border: 0;
+
+    background: transparent;
+
+    text-align: left;
+
+    padding: 10px 11px;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+
+    margin-bottom: 2px;
+
+    transition:
+        background .15s ease,
+        transform .10s ease;
+}
+
+
+.cw-history-item:hover,
+.cw-history-item.active {
+    background: rgba(91, 111, 214, .08);
+}
+
+
+.cw-history-item:active {
+    transform: scale(.99);
+}
+
+
+.cw-history-item-title {
+    display: block;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+}
+
+
+.cw-history-item-date {
+    display: block;
+
+    margin-top: 3px;
+
+    font-size: 10px;
+
+    opacity: .60;
+}
+
+
+.cw-history-empty {
+    padding: 18px 10px;
+
+    text-align: center;
+
+    font-size: 12px;
+
+    opacity: .65;
+}
+
+
+/* ============================================================
+   HISTORY LOADING
+   ============================================================ */
+
+.cw-history-loading {
+    padding: 18px 10px;
+
+    text-align: center;
+
+    font-size: 12px;
+
+    opacity: .65;
+}
 
 </style>
 
@@ -516,6 +665,7 @@
 <!-- ============================================================
      CHATBOT JAVASCRIPT
      ============================================================ -->
+
 <script>
 
 (function () {
@@ -527,12 +677,30 @@
        CONFIGURATION
        ======================================================== */
 
-    const CHAT_ENDPOINT = '/api/chatbot/chat';
-    const CHAT_HISTORY_ENDPOINT = '/api/chatbot/history';
-    const CHAT_CONVERSATION_ENDPOINT = '/api/chatbot/conversation';
+    const CHAT_ENDPOINT =
+        '/api/chatbot/chat';
+
+    const CHAT_HISTORY_ENDPOINT =
+        '/api/chatbot/history';
+
+    const CHAT_CONVERSATION_ENDPOINT =
+        '/api/chatbot/conversation';
+
+
+    /* ========================================================
+       CURRENT CONVERSATION
+       ======================================================== */
 
     let conversationId = null;
-    let chatHistoryLoaded = false;
+
+
+    /* ========================================================
+       REQUEST FLAGS
+       ======================================================== */
+
+    let historyLoading = false;
+
+    let chatSending = false;
 
 
     /* ========================================================
@@ -544,10 +712,17 @@
         const d = new Date();
 
         return (
-            d.getHours().toString().padStart(2, '0') +
-            ':' +
-            d.getMinutes().toString().padStart(2, '0')
+            d.getHours()
+                .toString()
+                .padStart(2, '0')
+            +
+            ':'
+            +
+            d.getMinutes()
+                .toString()
+                .padStart(2, '0')
         );
+
     }
 
 
@@ -557,32 +732,90 @@
 
     function escapeHtml(value) {
 
-        return String(value)
+        return String(value ?? '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+
     }
 
 
     /* ========================================================
-       FORMAT INLINE MARKDOWN
+       FORMAT INLINE CONTENT
        ======================================================== */
 
     function formatInline(text) {
 
+        let value = String(text ?? '');
+
+
         /*
-         * Escape HTML first.
+         * Convert HTML line breaks.
          */
-        let result = escapeHtml(text);
+
+        value = value.replace(
+            /<br\s*\/?>/gi,
+            '\n'
+        );
 
 
         /*
-         * Bold:
+         * Convert HTML bold to Markdown.
+         */
+
+        value = value.replace(
+            /<strong>(.*?)<\/strong>/gi,
+            '**$1**'
+        );
+
+        value = value.replace(
+            /<b>(.*?)<\/b>/gi,
+            '**$1**'
+        );
+
+
+        /*
+         * Convert HTML italic to Markdown.
+         */
+
+        value = value.replace(
+            /<em>(.*?)<\/em>/gi,
+            '*$1*'
+        );
+
+        value = value.replace(
+            /<i>(.*?)<\/i>/gi,
+            '*$1*'
+        );
+
+
+        /*
+         * Remove any remaining HTML.
          *
-         * **Barangay Clearance**
+         * This protects the chatbot from
+         * arbitrary HTML returned by AI.
          */
+
+        value = value.replace(
+            /<[^>]*>/g,
+            ''
+        );
+
+
+        /*
+         * Escape HTML.
+         */
+
+        let result =
+            escapeHtml(value);
+
+
+        /*
+         * Bold.
+         */
+
         result = result.replace(
             /\*\*(.*?)\*\*/g,
             '<strong>$1</strong>'
@@ -590,10 +823,9 @@
 
 
         /*
-         * Italic:
-         *
-         * *example*
+         * Italic.
          */
+
         result = result.replace(
             /(^|[^*])\*([^*]+)\*(?!\*)/g,
             '$1<em>$2</em>'
@@ -601,8 +833,9 @@
 
 
         /*
-         * Markdown inline code
+         * Inline code.
          */
+
         result = result.replace(
             /`([^`]+)`/g,
             '<code>$1</code>'
@@ -610,6 +843,7 @@
 
 
         return result;
+
     }
 
 
@@ -627,21 +861,13 @@
         }
 
 
-        /*
-         * Convert everything to string.
-         */
         text = String(text);
 
 
         /*
          * Normalize escaped newlines.
-         *
-         * This handles:
-         *
-         * \n
-         * \\n
-         * \r\n
          */
+
         text = text
             .replace(/\\r\\n/g, '\n')
             .replace(/\\n/g, '\n')
@@ -650,39 +876,41 @@
 
 
         /*
-         * ====================================================
-         * IMPORTANT FIX
-         * ====================================================
-         *
-         * OpenRouter may return:
-         *
-         * "1. Login 2. Open My Clearances 3. Click..."
-         *
-         * instead of:
-         *
-         * 1. Login
-         * 2. Open My Clearances
-         * 3. Click...
-         *
-         * So we FORCE a newline before numbered items.
+         * Convert HTML <br> to newline.
          */
+
         text = text.replace(
-            /\s+(\d{1,2})\.\s+/g,
-            '\n$1. '
+            /<br\s*\/?>/gi,
+            '\n'
         );
 
 
         /*
-         * If "1." is immediately after a colon:
+         * Force newline before numbered
+         * steps when AI returns them inline.
          *
-         * "follow these steps: 1. Login"
+         * Example:
          *
-         * turn it into:
+         * Please do the following: 1. Register
+         * 2. Login
          *
-         * "follow these steps:
+         * becomes:
          *
-         * 1. Login"
+         * Please do the following:
+         * 1. Register
+         * 2. Login
          */
+
+        text = text.replace(
+            /(\s)(\d{1,2})\.\s+/g,
+            '\n$2. '
+        );
+
+
+        /*
+         * Number immediately after colon.
+         */
+
         text = text.replace(
             /:\s*(\d{1,2})\.\s+/g,
             ':\n$1. '
@@ -690,18 +918,18 @@
 
 
         /*
-         * Normalize excessive spaces.
+         * Normalize spaces while preserving
+         * line breaks.
          */
+
         text = text.replace(
             /[ \t]+/g,
             ' '
         );
 
 
-        /*
-         * Split into lines.
-         */
-        const lines = text.split('\n');
+        const lines =
+            text.split('\n');
 
 
         let html = '';
@@ -711,9 +939,10 @@
         let inBulletList = false;
 
 
-        /*
-         * Close numbered list.
-         */
+        /* ====================================================
+           CLOSE NUMBERED LIST
+           ==================================================== */
+
         function closeNumberedList() {
 
             if (inNumberedList) {
@@ -721,13 +950,16 @@
                 html += '</ol>';
 
                 inNumberedList = false;
+
             }
+
         }
 
 
-        /*
-         * Close bullet list.
-         */
+        /* ====================================================
+           CLOSE BULLET LIST
+           ==================================================== */
+
         function closeBulletList() {
 
             if (inBulletList) {
@@ -735,124 +967,152 @@
                 html += '</ul>';
 
                 inBulletList = false;
+
             }
+
         }
 
 
-        /*
-         * Process every line.
-         */
-        lines.forEach(function (rawLine) {
+        /* ====================================================
+           PROCESS LINES
+           ==================================================== */
 
-            const line = rawLine.trim();
+        lines.forEach(
+            function (rawLine) {
 
-
-            /*
-             * Empty line
-             */
-            if (!line) {
-
-                closeNumberedList();
-                closeBulletList();
-
-                html += '<div class="cw-space"></div>';
-
-                return;
-            }
+                const line =
+                    rawLine.trim();
 
 
-            /*
-             * =================================================
-             * NUMBERED STEP
-             * =================================================
-             *
-             * Matches:
-             *
-             * 1. Login
-             * 2. Open My Clearances
-             */
-            const numberedMatch =
-                line.match(/^(\d{1,2})\.\s+(.*)$/);
+                /*
+                 * Empty line.
+                 */
 
+                if (!line) {
 
-            if (numberedMatch) {
+                    closeNumberedList();
 
-                closeBulletList();
-
-
-                if (!inNumberedList) {
+                    closeBulletList();
 
                     html +=
-                        '<ol class="cw-ai-steps">';
+                        '<div class="cw-space"></div>';
 
-                    inNumberedList = true;
+                    return;
+
                 }
 
 
-                html +=
-                    '<li>' +
-                    formatInline(numberedMatch[2]) +
-                    '</li>';
+                /*
+                 * Numbered list.
+                 *
+                 * Supports:
+                 *
+                 * 1. Text
+                 * 2. Text
+                 * 3. Text
+                 */
 
-                return;
-            }
-
-
-            /*
-             * =================================================
-             * BULLET
-             * =================================================
-             */
-            const bulletMatch =
-                line.match(/^(?:[-•*])\s+(.*)$/);
+                const numberedMatch =
+                    line.match(
+                        /^(\d{1,2})[.)]\s+(.*)$/
+                    );
 
 
-            if (bulletMatch) {
+                if (numberedMatch) {
 
-                closeNumberedList();
+                    closeBulletList();
 
 
-                if (!inBulletList) {
+                    if (!inNumberedList) {
+
+                        html +=
+                            '<ol class="cw-ai-steps">';
+
+                        inNumberedList = true;
+
+                    }
+
 
                     html +=
-                        '<ul class="cw-ai-bullets">';
+                        '<li>' +
+                        formatInline(
+                            numberedMatch[2]
+                        ) +
+                        '</li>';
 
-                    inBulletList = true;
+                    return;
+
                 }
 
 
+                /*
+                 * Bullet list.
+                 *
+                 * Supports:
+                 *
+                 * - Text
+                 * • Text
+                 * * Text
+                 */
+
+                const bulletMatch =
+                    line.match(
+                        /^[-•*]\s+(.*)$/
+                    );
+
+
+                if (bulletMatch) {
+
+                    closeNumberedList();
+
+
+                    if (!inBulletList) {
+
+                        html +=
+                            '<ul class="cw-ai-bullets">';
+
+                        inBulletList = true;
+
+                    }
+
+
+                    html +=
+                        '<li>' +
+                        formatInline(
+                            bulletMatch[1]
+                        ) +
+                        '</li>';
+
+                    return;
+
+                }
+
+
+                /*
+                 * Normal paragraph.
+                 */
+
+                closeNumberedList();
+
+                closeBulletList();
+
+
                 html +=
-                    '<li>' +
-                    formatInline(bulletMatch[1]) +
-                    '</li>';
+                    '<p class="cw-ai-paragraph">' +
+                    formatInline(line) +
+                    '</p>';
 
-                return;
             }
+        );
 
 
-            /*
-             * Normal paragraph
-             */
-            closeNumberedList();
-            closeBulletList();
-
-
-            html +=
-                '<p class="cw-ai-paragraph">' +
-                formatInline(line) +
-                '</p>';
-
-        });
-
-
-        /*
-         * Close lists if still open.
-         */
         closeNumberedList();
+
         closeBulletList();
 
 
         return html;
+
     }
 
 
@@ -863,7 +1123,10 @@
     function addMsg(text, isUser) {
 
         const wrap =
-            document.getElementById('cwMessages');
+            document.getElementById(
+                'cwMessages'
+            );
+
 
         if (!wrap) {
             return;
@@ -871,19 +1134,21 @@
 
 
         /*
-         * Remove quick buttons after first message.
+         * Remove quick questions after
+         * the first actual message.
          */
+
         const chips =
-            document.getElementById('cwChips');
+            document.getElementById(
+                'cwChips'
+            );
+
 
         if (chips) {
             chips.remove();
         }
 
 
-        /*
-         * Create message row.
-         */
         const row =
             document.createElement('div');
 
@@ -897,16 +1162,13 @@
             );
 
 
-        /*
-         * ====================================================
-         * USER MESSAGE
-         * ====================================================
-         */
+        /* ====================================================
+           USER MESSAGE
+           ==================================================== */
 
         if (isUser) {
 
             row.innerHTML = `
-
                 <div class="cw-body">
 
                     <div class="cw-bubble">
@@ -918,17 +1180,14 @@
                     </span>
 
                 </div>
-
             `;
 
         }
 
 
-        /*
-         * ====================================================
-         * AI MESSAGE
-         * ====================================================
-         */
+        /* ====================================================
+           AI MESSAGE
+           ==================================================== */
 
         else {
 
@@ -937,7 +1196,6 @@
 
 
             row.innerHTML = `
-
                 <div class="cw-avatar">
                     <i class="fas fa-robot"></i>
                 </div>
@@ -953,22 +1211,21 @@
                     </span>
 
                 </div>
-
             `;
+
         }
 
 
-        /*
-         * Add to chat.
-         */
         wrap.appendChild(row);
 
 
         /*
          * Scroll to bottom.
          */
+
         wrap.scrollTop =
             wrap.scrollHeight;
+
     }
 
 
@@ -979,18 +1236,21 @@
     function typing() {
 
         const wrap =
-            document.getElementById('cwMessages');
+            document.getElementById(
+                'cwMessages'
+            );
+
 
         if (!wrap) {
             return;
         }
 
 
-        /*
-         * Remove existing typing indicator.
-         */
         const existing =
-            document.getElementById('cwTyping');
+            document.getElementById(
+                'cwTyping'
+            );
+
 
         if (existing) {
             existing.remove();
@@ -1010,7 +1270,6 @@
 
 
         t.innerHTML = `
-
             <div class="cw-avatar">
                 <i class="fas fa-robot"></i>
             </div>
@@ -1026,7 +1285,6 @@
                 </div>
 
             </div>
-
         `;
 
 
@@ -1035,6 +1293,7 @@
 
         wrap.scrollTop =
             wrap.scrollHeight;
+
     }
 
 
@@ -1045,592 +1304,1320 @@
     function removeTyping() {
 
         const t =
-            document.getElementById('cwTyping');
+            document.getElementById(
+                'cwTyping'
+            );
+
 
         if (t) {
             t.remove();
         }
+
     }
 
 
     /* ========================================================
-       SEND MESSAGE TO OPENROUTER RAG
+       FETCH CHAT HISTORY
        ======================================================== */
 
+    async function fetchChatHistory() {
 
-    /* ========================================================
-       LOAD PERSISTENT CHAT HISTORY
-       ======================================================== */
-
-    async function loadChatHistory() {
-
-        if (chatHistoryLoaded) {
-            return;
-        }
-
-        chatHistoryLoaded = true;
-
-        try {
-            const response = await fetch(
-                CHAT_HISTORY_ENDPOINT,
+        const response =
+            await fetch(
+                CHAT_HISTORY_ENDPOINT +
+                '?_=' +
+                Date.now(),
                 {
                     method: 'GET',
-                    credentials: 'same-origin',
+
+                    credentials:
+                        'same-origin',
+
                     headers: {
-                        'Accept': 'application/json'
-                    }
+                        'Accept':
+                            'application/json',
+
+                        'X-Requested-With':
+                            'XMLHttpRequest'
+                    },
+
+                    cache: 'no-store'
                 }
             );
 
-            if (!response.ok) {
-                return;
-            }
 
-            const data = await response.json();
+        if (!response.ok) {
 
-            if (!data || !data.success || !data.authenticated) {
-                return;
-            }
+            throw new Error(
+                'History request failed: HTTP ' +
+                response.status
+            );
 
-            renderConversationList(data.conversations || []);
-
-            if (data.active_conversation_id) {
-                conversationId = Number(data.active_conversation_id);
-                renderStoredMessages(data.messages || []);
-            }
-
-        } catch (error) {
-            console.warn('Could not load BIS chat history:', error);
         }
+
+
+        const contentType =
+            response.headers.get(
+                'content-type'
+            ) || '';
+
+
+        if (
+            !contentType
+                .toLowerCase()
+                .includes('application/json')
+        ) {
+
+            throw new Error(
+                'History endpoint did not return JSON. Content-Type: ' +
+                contentType
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        console.log(
+            'BIS Chat History:',
+            data
+        );
+
+
+        return data;
+
     }
 
 
-    function renderConversationList(conversations) {
+    /* ========================================================
+       LOAD CHAT HISTORY
+       ======================================================== */
 
-        document.__cwConversations = conversations || [];
+    async function loadChatHistory(
+        loadActiveConversation = true
+    ) {
 
-        const list = document.getElementById('cwHistoryList');
+        if (historyLoading) {
+            return null;
+        }
+
+
+        historyLoading = true;
+
+
+        try {
+
+            const data =
+                await fetchChatHistory();
+
+
+            if (
+                !data ||
+                data.success !== true
+            ) {
+
+                console.warn(
+                    'BIS chat history unavailable:',
+                    data
+                );
+
+                return null;
+
+            }
+
+
+            document.__cwConversations =
+                Array.isArray(
+                    data.conversations
+                )
+                    ? data.conversations
+                    : [];
+
+
+            renderConversationList(
+                document.__cwConversations
+            );
+
+
+            /*
+             * Restore active conversation
+             * during initial loading.
+             */
+
+            if (
+                loadActiveConversation &&
+                data.active_conversation_id !==
+                    undefined &&
+                data.active_conversation_id !==
+                    null &&
+                Number(
+                    data.active_conversation_id
+                ) > 0
+            ) {
+
+                conversationId =
+                    Number(
+                        data.active_conversation_id
+                    );
+
+
+                if (
+                    Array.isArray(
+                        data.messages
+                    )
+                ) {
+
+                    renderStoredMessages(
+                        data.messages
+                    );
+
+                }
+
+
+                renderConversationList(
+                    document.__cwConversations
+                );
+
+            }
+
+
+            return data;
+
+        }
+        catch (error) {
+
+            console.error(
+                'Could not load BIS chat history:',
+                error
+            );
+
+            return null;
+
+        }
+        finally {
+
+            historyLoading = false;
+
+        }
+
+    }
+
+
+    /* ========================================================
+       REFRESH CONVERSATION LIST ONLY
+       ======================================================== */
+
+    async function refreshConversationList() {
+
+        try {
+
+            const data =
+                await fetchChatHistory();
+
+
+            if (
+                !data ||
+                data.success !== true
+            ) {
+
+                console.warn(
+                    'Could not refresh conversation list:',
+                    data
+                );
+
+                return;
+
+            }
+
+
+            document.__cwConversations =
+                Array.isArray(
+                    data.conversations
+                )
+                    ? data.conversations
+                    : [];
+
+
+            renderConversationList(
+                document.__cwConversations
+            );
+
+        }
+        catch (error) {
+
+            console.error(
+                'Could not refresh BIS conversation list:',
+                error
+            );
+
+        }
+
+    }
+
+
+    /* ========================================================
+       RENDER CONVERSATION LIST
+       ======================================================== */
+
+    function renderConversationList(
+        conversations
+    ) {
+
+        document.__cwConversations =
+            Array.isArray(conversations)
+                ? conversations
+                : [];
+
+
+        const list =
+            document.getElementById(
+                'cwHistoryList'
+            );
+
 
         if (!list) {
             return;
         }
 
+
         list.innerHTML = '';
 
-        if (!conversations.length) {
 
-            list.innerHTML =
-                '<div class="cw-history-empty">' +
-                'No saved conversations yet.' +
-                '</div>';
+        if (
+            document.__cwConversations.length === 0
+        ) {
+
+            list.innerHTML = `
+                <div class="cw-history-empty">
+                    No saved conversations yet.
+                </div>
+            `;
 
             return;
+
         }
 
-        conversations.forEach(function (conversation) {
 
-            const button = document.createElement('button');
+        document.__cwConversations.forEach(
+            function (conversation) {
 
-            button.type = 'button';
-            button.className = 'cw-history-item';
+                const button =
+                    document.createElement(
+                        'button'
+                    );
 
-            if (
-                conversationId !== null &&
-                Number(conversation.id) === Number(conversationId)
-            ) {
-                button.classList.add('active');
+
+                button.type =
+                    'button';
+
+
+                button.className =
+                    'cw-history-item';
+
+
+                if (
+                    conversationId !== null &&
+                    Number(conversation.id) ===
+                    Number(conversationId)
+                ) {
+
+                    button.classList.add(
+                        'active'
+                    );
+
+                }
+
+
+                const title =
+                    document.createElement(
+                        'span'
+                    );
+
+
+                title.className =
+                    'cw-history-item-title';
+
+
+                title.textContent =
+                    conversation.title ||
+                    'Conversation';
+
+
+                const date =
+                    document.createElement(
+                        'span'
+                    );
+
+
+                date.className =
+                    'cw-history-item-date';
+
+
+                date.textContent =
+                    formatConversationDate(
+                        conversation.updated_at ||
+                        conversation.created_at ||
+                        ''
+                    );
+
+
+                button.appendChild(
+                    title
+                );
+
+
+                button.appendChild(
+                    date
+                );
+
+
+                button.addEventListener(
+                    'click',
+                    function () {
+
+                        loadConversation(
+                            Number(
+                                conversation.id
+                            )
+                        );
+
+                    }
+                );
+
+
+                list.appendChild(
+                    button
+                );
+
             }
+        );
 
-            const title = document.createElement('span');
-            title.className = 'cw-history-item-title';
-            title.textContent =
-                conversation.title || 'Conversation';
-
-            const date = document.createElement('span');
-            date.className = 'cw-history-item-date';
-
-            date.textContent =
-                conversation.updated_at ||
-                conversation.created_at ||
-                '';
-
-            button.appendChild(title);
-            button.appendChild(date);
-
-            button.addEventListener('click', function () {
-                loadConversation(Number(conversation.id));
-            });
-
-            list.appendChild(button);
-        });
     }
 
 
+    /* ========================================================
+       FORMAT CONVERSATION DATE
+       ======================================================== */
+
+    function formatConversationDate(
+        value
+    ) {
+
+        if (!value) {
+            return '';
+        }
+
+
+        const normalized =
+            String(value).replace(
+                ' ',
+                'T'
+            );
+
+
+        const date =
+            new Date(
+                normalized
+            );
+
+
+        if (
+            isNaN(
+                date.getTime()
+            )
+        ) {
+
+            return String(value);
+
+        }
+
+
+        const today =
+            new Date();
+
+
+        if (
+            date.toDateString() ===
+            today.toDateString()
+        ) {
+
+            return (
+                date.getHours()
+                    .toString()
+                    .padStart(2, '0')
+                +
+                ':'
+                +
+                date.getMinutes()
+                    .toString()
+                    .padStart(2, '0')
+            );
+
+        }
+
+
+        return date.toLocaleDateString(
+            undefined,
+            {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            }
+        );
+
+    }
+
+
+    /* ========================================================
+       LOAD ONE CONVERSATION
+       ======================================================== */
+
     async function loadConversation(id) {
+
+        if (!id) {
+            return;
+        }
+
 
         try {
 
-            const response = await fetch(
-                CHAT_CONVERSATION_ENDPOINT + '/' + encodeURIComponent(id),
-                {
-                    method: 'GET',
-                    credentials: 'same-origin',
-                    headers: {
-                        'Accept': 'application/json'
+            const response =
+                await fetch(
+                    CHAT_CONVERSATION_ENDPOINT +
+                    '/' +
+                    encodeURIComponent(id) +
+                    '?_=' +
+                    Date.now(),
+                    {
+                        method: 'GET',
+
+                        credentials:
+                            'same-origin',
+
+                        headers: {
+                            'Accept':
+                                'application/json',
+
+                            'X-Requested-With':
+                                'XMLHttpRequest'
+                        },
+
+                        cache: 'no-store'
                     }
-                }
-            );
+                );
+
 
             if (!response.ok) {
-                return;
+
+                throw new Error(
+                    'Conversation request failed: HTTP ' +
+                    response.status
+                );
+
             }
 
-            const data = await response.json();
 
-            if (!data || !data.success) {
-                return;
+            const contentType =
+                response.headers.get(
+                    'content-type'
+                ) || '';
+
+
+            if (
+                !contentType
+                    .toLowerCase()
+                    .includes('application/json')
+            ) {
+
+                throw new Error(
+                    'Conversation endpoint did not return JSON.'
+                );
+
             }
 
-            conversationId = Number(id);
 
-            renderStoredMessages(data.messages || []);
+            const data =
+                await response.json();
+
+
+            console.log(
+                'Selected BIS Conversation:',
+                data
+            );
+
+
+            if (
+                !data ||
+                data.success !== true
+            ) {
+
+                console.error(
+                    'Conversation could not be loaded:',
+                    data
+                );
+
+                return;
+
+            }
+
+
+            conversationId =
+                Number(id);
+
+
+            renderStoredMessages(
+                Array.isArray(
+                    data.messages
+                )
+                    ? data.messages
+                    : []
+            );
+
 
             const panel =
-                document.getElementById('cwHistoryPanel');
+                document.getElementById(
+                    'cwHistoryPanel'
+                );
+
 
             if (panel) {
                 panel.hidden = true;
             }
 
+
             renderConversationList(
-                document.__cwConversations || []
+                document.__cwConversations ||
+                []
             );
 
-        } catch (error) {
-            console.error('Could not load BIS conversation:', error);
+
+            const input =
+                document.getElementById(
+                    'cwInput'
+                );
+
+
+            if (input) {
+                input.focus();
+            }
+
         }
+        catch (error) {
+
+            console.error(
+                'Could not load BIS conversation:',
+                error
+            );
+
+        }
+
     }
 
 
-    function renderStoredMessages(messages) {
+    /* ========================================================
+       RENDER STORED MESSAGES
+       ======================================================== */
+
+    function renderStoredMessages(
+        messages
+    ) {
 
         const wrap =
-            document.getElementById('cwMessages');
+            document.getElementById(
+                'cwMessages'
+            );
+
 
         if (!wrap) {
             return;
         }
 
-        /*
-         * Clear the temporary greeting/chips and rebuild the selected
-         * conversation from the database.
-         */
+
         wrap.innerHTML = '';
 
-        if (!messages.length) {
+
+        if (
+            !Array.isArray(messages) ||
+            messages.length === 0
+        ) {
+
             addMsg(
                 "Hello! I'm the BIS Assistant 👋\n\nHow can I help you today?",
                 false
             );
+
             return;
+
         }
 
-        messages.forEach(function (item) {
 
-            addMsg(
-                item.message || '',
-                item.sender === 'user'
-            );
+        messages.forEach(
+            function (item) {
 
-        });
+                addMsg(
+                    item.message || '',
+                    item.sender === 'user'
+                );
 
-        wrap.scrollTop = wrap.scrollHeight;
+            }
+        );
+
+
+        wrap.scrollTop =
+            wrap.scrollHeight;
+
     }
 
 
-    window.cwToggleHistory = function () {
+    /* ========================================================
+       TOGGLE HISTORY
+       ======================================================== */
 
-        const panel =
-            document.getElementById('cwHistoryPanel');
+    window.cwToggleHistory =
+        async function () {
 
-        if (!panel) {
-            return;
-        }
-
-        panel.hidden = !panel.hidden;
-
-        if (!panel.hidden) {
-            loadChatHistory();
-        }
-    };
-
-
-    window.cwNewChat = function () {
-
-        conversationId = null;
-
-        const panel =
-            document.getElementById('cwHistoryPanel');
-
-        if (panel) {
-            panel.hidden = true;
-        }
-
-        const wrap =
-            document.getElementById('cwMessages');
-
-        if (wrap) {
-            wrap.innerHTML = '';
-
-            addMsg(
-                "Hello! I'm the BIS Assistant 👋\n\nHow can I help you today?",
-                false
-            );
-
-            /*
-             * Recreate quick-topic chips for the new conversation.
-             */
-            const chips = document.createElement('div');
-
-            chips.className = 'cw-chips';
-            chips.id = 'cwChips';
-
-            chips.innerHTML = `
-                <button type="button" class="cw-chip" onclick="cwQuick('How do I request a barangay clearance?')">
-                    <i class="fas fa-file-alt"></i> Request clearance
-                </button>
-                <button type="button" class="cw-chip" onclick="cwQuick('How do I create an account?')">
-                    <i class="fas fa-user-plus"></i> Create account
-                </button>
-                <button type="button" class="cw-chip" onclick="cwQuick('How do I file a blotter report?')">
-                    <i class="fas fa-book"></i> File blotter
-                </button>
-                <button type="button" class="cw-chip" onclick="cwQuick('What documents can I request?')">
-                    <i class="fas fa-file-contract"></i> Documents
-                </button>
-                <button type="button" class="cw-chip" onclick="cwQuick('What are the office hours?')">
-                    <i class="fas fa-clock"></i> Office hours
-                </button>
-                <button type="button" class="cw-chip" onclick="cwQuick('How do I reset my password?')">
-                    <i class="fas fa-key"></i> Reset password
-                </button>
-            `;
-
-            wrap.appendChild(chips);
-        }
-
-        const input =
-            document.getElementById('cwInput');
-
-        if (input) {
-            input.focus();
-        }
-    };
-
-
-    document.addEventListener('DOMContentLoaded', function () {
-        loadChatHistory();
-    });
-
-
-    window.cwSend = async function () {
-
-        const inp =
-            document.getElementById('cwInput');
-
-
-        if (!inp) {
-            return;
-        }
-
-
-        const msg =
-            inp.value.trim();
-
-
-        /*
-         * Don't send empty message.
-         */
-        if (!msg) {
-            return;
-        }
-
-
-        /*
-         * Display user message.
-         */
-        addMsg(msg, true);
-
-
-        /*
-         * Clear input.
-         */
-        inp.value = '';
-
-
-        /*
-         * Hide unread badge.
-         */
-        const unread =
-            document.getElementById('cwUnread');
-
-        if (unread) {
-            unread.style.display = 'none';
-        }
-
-
-        /*
-         * Show typing.
-         */
-        typing();
-
-
-        try {
-
-            /*
-             * =================================================
-             * SEND TO YOUR CODEIGNITER API
-             * =================================================
-             */
-            const response =
-                await fetch(
-                    CHAT_ENDPOINT,
-                    {
-                        method: 'POST',
-
-                        headers: {
-                            'Content-Type':
-                                'application/x-www-form-urlencoded; charset=UTF-8',
-
-                            'Accept':
-                                'application/json'
-                        },
-
-                        credentials:
-                            'same-origin',
-
-                        body:
-                            'message=' +
-                            encodeURIComponent(msg) +
-                            '&conversation_id=' +
-                            encodeURIComponent(
-                                conversationId === null ? '' : conversationId
-                            )
-                    }
+            const panel =
+                document.getElementById(
+                    'cwHistoryPanel'
                 );
 
 
-            /*
-             * Check HTTP status.
-             */
-            if (!response.ok) {
-
-                throw new Error(
-                    'HTTP ' +
-                    response.status
-                );
-            }
-
-
-            /*
-             * Parse JSON.
-             */
-            const data =
-                await response.json();
-
-
-            /*
-             * Remove typing.
-             */
-            removeTyping();
-
-
-            /*
-             * =================================================
-             * SUCCESSFUL AI RESPONSE
-             * =================================================
-             */
-            if (
-                data &&
-                data.success &&
-                data.response
-            ) {
-
-                if (
-                    data.conversation_id !== undefined &&
-                    data.conversation_id !== null &&
-                    Number(data.conversation_id) > 0
-                ) {
-                    conversationId = Number(data.conversation_id);
-                }
-
-                addMsg(
-                    data.response,
-                    false
-                );
-
-
-                /*
-                 * Console information.
-                 *
-                 * This is useful for confirming RAG.
-                 */
-                console.log(
-                    'BIS AI Response:',
-                    data
-                );
-
+            if (!panel) {
                 return;
             }
 
 
-            /*
-             * =================================================
-             * API RETURNED ERROR
-             * =================================================
-             */
-            addMsg(
-                'Sorry, I could not generate an answer right now. Please try again.',
-                false
-            );
+            panel.hidden =
+                !panel.hidden;
 
 
-            console.error(
-                'Chatbot API error:',
-                data
-            );
+            if (!panel.hidden) {
 
-        }
-
-        catch (error) {
-
-            /*
-             * Remove typing.
-             */
-            removeTyping();
+                const list =
+                    document.getElementById(
+                        'cwHistoryList'
+                    );
 
 
-            /*
-             * Show connection error.
-             */
-            addMsg(
-                'Sorry, I could not connect to the BIS AI service. Please try again.',
-                false
-            );
+                if (list) {
+
+                    list.innerHTML = `
+                        <div class="cw-history-loading">
+                            Loading conversations...
+                        </div>
+                    `;
+
+                }
 
 
-            console.error(
-                'Chatbot request failed:',
-                error
-            );
-        }
+                await refreshConversationList();
 
-    };
+            }
+
+        };
 
 
     /* ========================================================
-       QUICK QUESTION
+       NEW CONVERSATION
        ======================================================== */
 
-    window.cwQuick = function (msg) {
+    window.cwNewChat =
+        function () {
 
-        const chips =
-            document.getElementById('cwChips');
-
-        if (chips) {
-            chips.remove();
-        }
+            conversationId = null;
 
 
-        const input =
-            document.getElementById('cwInput');
-
-        if (input) {
-            input.value = msg;
-        }
+            const panel =
+                document.getElementById(
+                    'cwHistoryPanel'
+                );
 
 
-        /*
-         * Send through the exact same
-         * OpenRouter/RAG API process.
-         */
-        window.cwSend();
-    };
+            if (panel) {
+                panel.hidden = true;
+            }
+
+
+            const wrap =
+                document.getElementById(
+                    'cwMessages'
+                );
+
+
+            if (wrap) {
+
+                wrap.innerHTML = '';
+
+
+                addMsg(
+                    "Hello! I'm the BIS Assistant 👋\n\nHow can I help you today?",
+                    false
+                );
+
+
+                const chips =
+                    document.createElement(
+                        'div'
+                    );
+
+
+                chips.className =
+                    'cw-chips';
+
+
+                chips.id =
+                    'cwChips';
+
+
+                chips.innerHTML = `
+
+                    <button
+                        type="button"
+                        class="cw-chip"
+                        onclick="cwQuick('How do I request a barangay clearance?')">
+
+                        <i class="fas fa-file-alt"></i>
+                        Request clearance
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="cw-chip"
+                        onclick="cwQuick('How do I create an account?')">
+
+                        <i class="fas fa-user-plus"></i>
+                        Create account
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="cw-chip"
+                        onclick="cwQuick('How do I file a blotter report?')">
+
+                        <i class="fas fa-book"></i>
+                        File blotter
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="cw-chip"
+                        onclick="cwQuick('What documents can I request?')">
+
+                        <i class="fas fa-file-contract"></i>
+                        Documents
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="cw-chip"
+                        onclick="cwQuick('What are the office hours?')">
+
+                        <i class="fas fa-clock"></i>
+                        Office hours
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="cw-chip"
+                        onclick="cwQuick('How do I reset my password?')">
+
+                        <i class="fas fa-key"></i>
+                        Reset password
+
+                    </button>
+
+                `;
+
+
+                wrap.appendChild(
+                    chips
+                );
+
+            }
+
+
+            renderConversationList(
+                document.__cwConversations ||
+                []
+            );
+
+
+            const input =
+                document.getElementById(
+                    'cwInput'
+                );
+
+
+            if (input) {
+
+                input.value = '';
+
+                input.focus();
+
+            }
+
+        };
 
 
     /* ========================================================
-       OPEN CHAT
+       SEND MESSAGE
        ======================================================== */
 
-    window.cwOpen = function () {
+    window.cwSend =
+        async function () {
 
-        const panel =
-            document.getElementById('cwPanel');
-
-        const wrap =
-            document.getElementById('cwWrap');
-
-        const unread =
-            document.getElementById('cwUnread');
+            if (chatSending) {
+                return;
+            }
 
 
-        if (!panel || !wrap) {
-            return;
-        }
+            const inp =
+                document.getElementById(
+                    'cwInput'
+                );
 
 
-        panel.classList.toggle('cw-open');
+            if (!inp) {
+                return;
+            }
 
-        wrap.classList.toggle('cw-active');
+
+            const msg =
+                inp.value.trim();
 
 
-        if (
-            panel.classList.contains('cw-open')
-        ) {
+            if (!msg) {
+                return;
+            }
+
+
+            chatSending = true;
+
+
+            /*
+             * Display user message immediately.
+             */
+
+            addMsg(
+                msg,
+                true
+            );
+
+
+            inp.value = '';
+
+
+            const unread =
+                document.getElementById(
+                    'cwUnread'
+                );
+
 
             if (unread) {
                 unread.style.display = 'none';
             }
 
 
-            setTimeout(function () {
+            typing();
 
-                const input =
-                    document.getElementById('cwInput');
 
-                if (input) {
-                    input.focus();
+            try {
+
+                const body =
+                    new URLSearchParams();
+
+
+                body.append(
+                    'message',
+                    msg
+                );
+
+
+                if (
+                    conversationId !== null &&
+                    Number(conversationId) > 0
+                ) {
+
+                    body.append(
+                        'conversation_id',
+                        String(
+                            conversationId
+                        )
+                    );
+
+                }
+                else {
+
+                    body.append(
+                        'conversation_id',
+                        ''
+                    );
+
                 }
 
-            }, 150);
-        }
 
-    };
+                const response =
+                    await fetch(
+                        CHAT_ENDPOINT,
+                        {
+                            method: 'POST',
+
+                            headers: {
+
+                                'Content-Type':
+                                    'application/x-www-form-urlencoded; charset=UTF-8',
+
+                                'Accept':
+                                    'application/json',
+
+                                'X-Requested-With':
+                                    'XMLHttpRequest'
+
+                            },
+
+                            credentials:
+                                'same-origin',
+
+                            body:
+                                body.toString()
+
+                        }
+                    );
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        'Chat request failed: HTTP ' +
+                        response.status
+                    );
+
+                }
+
+
+                const contentType =
+                    response.headers.get(
+                        'content-type'
+                    ) || '';
+
+
+                if (
+                    !contentType
+                        .toLowerCase()
+                        .includes('application/json')
+                ) {
+
+                    throw new Error(
+                        'Chat API did not return JSON.'
+                    );
+
+                }
+
+
+                const data =
+                    await response.json();
+
+
+                removeTyping();
+
+
+                console.log(
+                    'BIS AI Response:',
+                    data
+                );
+
+
+                /* =================================================
+                   SUCCESS
+                   ================================================= */
+
+                if (
+                    data &&
+                    data.success === true &&
+                    data.response
+                ) {
+
+                    /*
+                     * Save returned conversation ID.
+                     */
+
+                    if (
+                        data.conversation_id !==
+                            undefined &&
+                        data.conversation_id !==
+                            null &&
+                        Number(
+                            data.conversation_id
+                        ) > 0
+                    ) {
+
+                        conversationId =
+                            Number(
+                                data.conversation_id
+                            );
+
+                    }
+
+
+                    /*
+                     * addMsg() automatically calls
+                     * formatAIResponse() for AI messages.
+                     *
+                     * Therefore:
+                     *
+                     * data.response
+                     *
+                     * should NOT be formatted here again.
+                     */
+
+                    addMsg(
+                        data.response,
+                        false
+                    );
+
+
+                    /*
+                     * Refresh recent conversations.
+                     *
+                     * This does NOT reload current messages.
+                     */
+
+                    await refreshConversationList();
+
+
+                    /*
+                     * Highlight current conversation.
+                     */
+
+                    renderConversationList(
+                        document.__cwConversations ||
+                        []
+                    );
+
+
+                    return;
+
+                }
+
+
+                /* =================================================
+                   API ERROR
+                   ================================================= */
+
+                addMsg(
+                    'Sorry, I could not generate an answer right now. Please try again.',
+                    false
+                );
+
+
+                console.error(
+                    'Chatbot API error:',
+                    data
+                );
+
+            }
+            catch (error) {
+
+                removeTyping();
+
+
+                addMsg(
+                    'Sorry, I could not connect to the BIS AI service. Please try again.',
+                    false
+                );
+
+
+                console.error(
+                    'Chatbot request failed:',
+                    error
+                );
+
+            }
+            finally {
+
+                chatSending = false;
+
+            }
+
+        };
+
+
+    /* ========================================================
+       QUICK QUESTION
+       ======================================================== */
+
+    window.cwQuick =
+        function (msg) {
+
+            const chips =
+                document.getElementById(
+                    'cwChips'
+                );
+
+
+            if (chips) {
+                chips.remove();
+            }
+
+
+            const input =
+                document.getElementById(
+                    'cwInput'
+                );
+
+
+            if (!input) {
+                return;
+            }
+
+
+            input.value =
+                msg;
+
+
+            window.cwSend();
+
+        };
+
+
+    /* ========================================================
+       OPEN CHAT
+       ======================================================== */
+
+    window.cwOpen =
+        function () {
+
+            const panel =
+                document.getElementById(
+                    'cwPanel'
+                );
+
+
+            const wrap =
+                document.getElementById(
+                    'cwWrap'
+                );
+
+
+            const unread =
+                document.getElementById(
+                    'cwUnread'
+                );
+
+
+            if (
+                !panel ||
+                !wrap
+            ) {
+
+                return;
+
+            }
+
+
+            panel.classList.toggle(
+                'cw-open'
+            );
+
+
+            wrap.classList.toggle(
+                'cw-active'
+            );
+
+
+            if (
+                panel.classList.contains(
+                    'cw-open'
+                )
+            ) {
+
+                if (unread) {
+
+                    unread.style.display =
+                        'none';
+
+                }
+
+
+                /*
+                 * Refresh conversation list
+                 * whenever chatbot is opened.
+                 */
+
+                refreshConversationList();
+
+
+                setTimeout(
+                    function () {
+
+                        const input =
+                            document.getElementById(
+                                'cwInput'
+                            );
+
+
+                        if (input) {
+                            input.focus();
+                        }
+
+                    },
+                    150
+                );
+
+            }
+
+        };
 
 
     /* ========================================================
        CLOSE CHAT
        ======================================================== */
 
-    window.cwClose = function () {
+    window.cwClose =
+        function () {
 
-        const panel =
-            document.getElementById('cwPanel');
-
-        const wrap =
-            document.getElementById('cwWrap');
-
-
-        if (panel) {
-            panel.classList.remove('cw-open');
-        }
+            const panel =
+                document.getElementById(
+                    'cwPanel'
+                );
 
 
-        if (wrap) {
-            wrap.classList.remove('cw-active');
-        }
+            const wrap =
+                document.getElementById(
+                    'cwWrap'
+                );
 
-    };
+
+            if (panel) {
+
+                panel.classList.remove(
+                    'cw-open'
+                );
+
+            }
+
+
+            if (wrap) {
+
+                wrap.classList.remove(
+                    'cw-active'
+                );
+
+            }
+
+        };
 
 
     /* ========================================================
@@ -1644,13 +2631,29 @@
             if (
                 event.key === 'Enter' &&
                 document.activeElement &&
-                document.activeElement.id === 'cwInput'
+                document.activeElement.id ===
+                    'cwInput'
             ) {
 
                 event.preventDefault();
 
                 window.cwSend();
+
             }
+
+        }
+    );
+
+
+    /* ========================================================
+       INITIALIZE
+       ======================================================== */
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        function () {
+
+            loadChatHistory(true);
 
         }
     );
@@ -1678,6 +2681,7 @@
 
 <header class="db-topbar">
 
+    <!-- Mobile Menu -->
     <button
         class="db-menu-toggle"
         onclick="document.getElementById('sidebar').classList.toggle('open')"
@@ -1688,6 +2692,7 @@
     </button>
 
 
+    <!-- Page Title -->
     <div class="db-topbar-title">
 
         <h1>
@@ -1701,9 +2706,13 @@
     </div>
 
 
+    <!-- Right Side -->
     <div class="db-topbar-right">
 
-        <!-- Notification -->
+        <!-- ====================================================
+             NOTIFICATIONS
+             ==================================================== -->
+
         <button
             class="db-notif-btn"
             onclick="window.location.href='/<?= esc((string)(session()->get('role') ?? 'resident')) ?>/notifications'"
@@ -1711,11 +2720,13 @@
 
             <i class="fas fa-bell"></i>
 
+
             <span
                 class="db-notif-dot"
                 id="topbarNotifDot"
                 style="display:none;">
             </span>
+
 
             <span
                 id="topbarUnreadCount"
@@ -1726,7 +2737,10 @@
         </button>
 
 
-        <!-- Avatar -->
+        <!-- ====================================================
+             AVATAR
+             ==================================================== -->
+
         <div
             class="db-avatar"
             onclick="window.location.href='/<?= esc((string)(session()->get('role') ?? 'resident')) ?>/<?= session()->get('role') === 'resident' ? 'profile' : 'settings' ?>'"
@@ -1767,7 +2781,10 @@
         </div>
 
 
-        <!-- Username -->
+        <!-- ====================================================
+             USERNAME
+             ==================================================== -->
+
         <span class="db-username">
 
             <?= esc(
@@ -1792,36 +2809,37 @@
 
 <style>
 
-    .db-notif-count {
+.db-notif-count {
+    position: absolute;
 
-        position: absolute;
+    top: 2px;
 
-        top: 2px;
-        right: 2px;
+    right: 2px;
 
-        min-width: 17px;
-        height: 17px;
+    min-width: 17px;
 
-        background: #c0392b;
+    height: 17px;
 
-        color: #fff;
+    background: #c0392b;
 
-        font-size: 10px;
+    color: #fff;
 
-        font-weight: 700;
+    font-size: 10px;
 
-        border-radius: 100px;
+    font-weight: 700;
 
-        display: flex;
+    border-radius: 100px;
 
-        align-items: center;
+    display: flex;
 
-        justify-content: center;
+    align-items: center;
 
-        padding: 0 4px;
+    justify-content: center;
 
-        pointer-events: none;
-    }
+    padding: 0 4px;
+
+    pointer-events: none;
+}
 
 </style>
 
@@ -1840,54 +2858,62 @@
             }
         )
 
-        .then(function (r) {
-            return r.json();
-        })
-
-        .then(function (data) {
-
-            const count =
-                data.unread || 0;
-
-
-            const dot =
-                document.getElementById(
-                    'topbarNotifDot'
-                );
-
-
-            const badge =
-                document.getElementById(
-                    'topbarUnreadCount'
-                );
-
-
-            if (dot) {
-
-                dot.style.display =
-                    count > 0
-                        ? ''
-                        : 'none';
+        .then(
+            function (r) {
+                return r.json();
             }
+        )
+
+        .then(
+            function (data) {
+
+                const count =
+                    data.unread || 0;
 
 
-            if (badge) {
-
-                badge.textContent =
-                    count > 9
-                        ? '9+'
-                        : count;
+                const dot =
+                    document.getElementById(
+                        'topbarNotifDot'
+                    );
 
 
-                badge.style.display =
-                    count > 0
-                        ? 'flex'
-                        : 'none';
+                const badge =
+                    document.getElementById(
+                        'topbarUnreadCount'
+                    );
+
+
+                if (dot) {
+
+                    dot.style.display =
+                        count > 0
+                            ? ''
+                            : 'none';
+
+                }
+
+
+                if (badge) {
+
+                    badge.textContent =
+                        count > 9
+                            ? '9+'
+                            : count;
+
+
+                    badge.style.display =
+                        count > 0
+                            ? 'flex'
+                            : 'none';
+
+                }
+
             }
+        )
 
-        })
-
-        .catch(function () {});
+        .catch(
+            function () {}
+        );
 
     }
 
@@ -1918,36 +2944,37 @@
 
 <style>
 
-    .db-notif-count {
+.db-notif-count {
+    position: absolute;
 
-        position: absolute;
+    top: 2px;
 
-        top: 2px;
-        right: 2px;
+    right: 2px;
 
-        min-width: 17px;
-        height: 17px;
+    min-width: 17px;
 
-        background: #e6a800;
+    height: 17px;
 
-        color: #fff;
+    background: #e6a800;
 
-        font-size: 10px;
+    color: #fff;
 
-        font-weight: 700;
+    font-size: 10px;
 
-        border-radius: 100px;
+    font-weight: 700;
 
-        display: flex;
+    border-radius: 100px;
 
-        align-items: center;
+    display: flex;
 
-        justify-content: center;
+    align-items: center;
 
-        padding: 0 4px;
+    justify-content: center;
 
-        pointer-events: none;
-    }
+    padding: 0 4px;
+
+    pointer-events: none;
+}
 
 </style>
 
@@ -1972,54 +2999,62 @@
             }
         )
 
-        .then(function (r) {
-            return r.json();
-        })
-
-        .then(function (data) {
-
-            const count =
-                data.unread || 0;
-
-
-            const dot =
-                document.getElementById(
-                    'topbarNotifDot'
-                );
-
-
-            const badge =
-                document.getElementById(
-                    'topbarUnreadCount'
-                );
-
-
-            if (dot) {
-
-                dot.style.display =
-                    count > 0
-                        ? ''
-                        : 'none';
+        .then(
+            function (r) {
+                return r.json();
             }
+        )
+
+        .then(
+            function (data) {
+
+                const count =
+                    data.unread || 0;
 
 
-            if (badge) {
-
-                badge.textContent =
-                    count > 9
-                        ? '9+'
-                        : count;
+                const dot =
+                    document.getElementById(
+                        'topbarNotifDot'
+                    );
 
 
-                badge.style.display =
-                    count > 0
-                        ? 'flex'
-                        : 'none';
+                const badge =
+                    document.getElementById(
+                        'topbarUnreadCount'
+                    );
+
+
+                if (dot) {
+
+                    dot.style.display =
+                        count > 0
+                            ? ''
+                            : 'none';
+
+                }
+
+
+                if (badge) {
+
+                    badge.textContent =
+                        count > 9
+                            ? '9+'
+                            : count;
+
+
+                    badge.style.display =
+                        count > 0
+                            ? 'flex'
+                            : 'none';
+
+                }
+
             }
+        )
 
-        })
-
-        .catch(function () {});
+        .catch(
+            function () {}
+        );
 
     }
 
