@@ -20,6 +20,17 @@ class ChatbotController extends ResourceController
     protected int $historyLimit = 12;
     protected int $recentConversationLimit = 10;
 
+    // Human/customer-support conversation states.
+    protected const SUPPORT_AI = 'ai';
+    protected const SUPPORT_WAITING_HUMAN = 'waiting_human';
+    protected const SUPPORT_HUMAN = 'human';
+    protected const SUPPORT_CLOSED = 'closed';
+
+    // Consider a resident active/online when their last chat activity
+    // occurred within this number of seconds. The actual frontend should
+    // poll the chat endpoint every 2-3 seconds.
+    protected int $onlineActivityWindow = 30;
+
     protected HouseholdModel $householdModel;
     protected HouseholdMemberModel $memberModel;
     protected ChatConversationModel $conversationModel;
@@ -50,10 +61,17 @@ class ChatbotController extends ResourceController
     public function chat()
     {
         try {
+            // Support both normal form POST and JSON requests.
+            // The existing frontend uses JSON for human-support chat, while
+            // the original chatbot may use form-encoded requests.
+            $jsonInput = $this->getJsonInput();
+
             $message = trim(
                 (string) (
                     $this->request->getPost('message')
                     ?? $this->request->getPost('query')
+                    ?? $jsonInput['message']
+                    ?? $jsonInput['query']
                     ?? ''
                 )
             );
@@ -82,6 +100,179 @@ class ChatbotController extends ResourceController
             $userId = $this->getAuthenticatedUserId();
             $role = $this->getCurrentUserRole();
 
+            /*
+             * ------------------------------------------------------------
+             * HUMAN SUPPORT MUST BE DETECTED BEFORE ANY LOCAL AI ROUTING
+             * ------------------------------------------------------------
+             *
+             * This check intentionally happens before conversation-state
+             * handling and before handleSimpleQuestion(). Otherwise a
+             * message such as "Can I speak with the secretary?" can fall
+             * through to the office-hours response.
+             */
+            if ($this->isHumanSupportRequest($message)) {
+
+                // Human support conversations belong to authenticated users.
+                if ($userId === null) {
+                    return $this->response
+                        ->setStatusCode(401)
+                        ->setJSON([
+                            'success' => false,
+                            'response' =>
+                                'Please log in to request a Barangay staff member through customer service.',
+                            'source' => 'human_support_authentication_required',
+                            'support_mode' => self::SUPPORT_AI,
+                            'waiting_for_staff' => false
+                        ]);
+                }
+
+                // Accept all existing conversation ID formats.
+                $requestedConversationId = (int) (
+                    $this->request->getPost('conversation_id')
+                    ?? $this->request->getPost('conversationId')
+                    ?? $this->request->getPost('conversationID')
+                    ?? $jsonInput['conversation_id']
+                    ?? $jsonInput['conversationId']
+                    ?? $jsonInput['conversationID']
+                    ?? 0
+                );
+
+                $supportConversation = $this->getOrCreateConversation(
+                    $userId,
+                    $requestedConversationId,
+                    $message
+                );
+
+                if ($supportConversation === null) {
+                    return $this->response
+                        ->setStatusCode(403)
+                        ->setJSON([
+                            'success' => false,
+                            'response' => 'Invalid chat conversation.',
+                            'source' => 'human_support_authorization'
+                        ]);
+                }
+
+                $supportConversationId = (int) $supportConversation['id'];
+                $supportModeNow = $this->getConversationSupportMode(
+                    $supportConversationId
+                );
+
+                // Already connected to a staff member.
+                if ($supportModeNow === self::SUPPORT_HUMAN) {
+                    $saved = $this->saveSupportMessage(
+                        $supportConversationId,
+                        'user',
+                        $message,
+                        $userId
+                    );
+
+                    $this->touchConversationActivity(
+                        $supportConversationId
+                    );
+
+                    return $this->response->setJSON([
+                        'success' => true,
+                        'response' => null,
+                        'source' => 'human_support',
+                        'conversation_id' => $supportConversationId,
+                        'support_mode' => self::SUPPORT_HUMAN,
+                        'message_saved' => $saved,
+                        'waiting_for_staff' => false
+                    ]);
+                }
+
+                // Already waiting for staff.
+                if ($supportModeNow === self::SUPPORT_WAITING_HUMAN) {
+                    $saved = $this->saveSupportMessage(
+                        $supportConversationId,
+                        'user',
+                        $message,
+                        $userId
+                    );
+
+                    $this->touchConversationActivity(
+                        $supportConversationId
+                    );
+
+                    return $this->response->setJSON([
+                        'success' => true,
+                        'response' => 'Your request is already in the support queue. Please wait for a Barangay Secretary or authorized staff member to respond.',
+                        'source' => 'human_support_queue',
+                        'conversation_id' => $supportConversationId,
+                        'support_mode' => self::SUPPORT_WAITING_HUMAN,
+                        'message_saved' => $saved,
+                        'waiting_for_staff' => true
+                    ]);
+                }
+
+                // A closed support conversation cannot be reused.
+                if ($supportModeNow === self::SUPPORT_CLOSED) {
+                    return $this->response->setJSON([
+                        'success' => true,
+                        'response' => 'This support conversation has been closed. Please start a new conversation to request a Barangay staff member.',
+                        'source' => 'closed_support',
+                        'conversation_id' => $supportConversationId,
+                        'support_mode' => self::SUPPORT_CLOSED,
+                        'waiting_for_staff' => false
+                    ]);
+                }
+
+                // Move the conversation from AI to the human-support queue.
+                if (!$this->updateConversationSupportMode(
+                    $supportConversationId,
+                    self::SUPPORT_WAITING_HUMAN,
+                    null
+                )) {
+                    log_message(
+                        'error',
+                        'Early human-support handoff failed. conversation_id=' .
+                        $supportConversationId
+                    );
+
+                    return $this->response
+                        ->setStatusCode(500)
+                        ->setJSON([
+                            'success' => false,
+                            'response' => 'I could not connect you to customer service right now. Please try again.',
+                            'source' => 'human_support_update_failed',
+                            'conversation_id' => $supportConversationId
+                        ]);
+                }
+
+                $this->saveSupportMessage(
+                    $supportConversationId,
+                    'user',
+                    $message,
+                    $userId
+                );
+
+                $handoffMessage =
+                    'I can connect you with a Barangay support staff member. ' .
+                    'Your request has been placed in the support queue. ' .
+                    'Please wait for a secretary or authorized staff member to assist you.';
+
+                $this->saveSupportMessage(
+                    $supportConversationId,
+                    'assistant',
+                    $handoffMessage,
+                    null
+                );
+
+                $this->touchConversationActivity(
+                    $supportConversationId
+                );
+
+                return $this->response->setJSON([
+                    'success' => true,
+                    'response' => $handoffMessage,
+                    'source' => 'human_support_handoff',
+                    'conversation_id' => $supportConversationId,
+                    'support_mode' => self::SUPPORT_WAITING_HUMAN,
+                    'waiting_for_staff' => true
+                ]);
+            }
+
             log_message(
                 'info',
                 'Chatbot access: role=' .
@@ -95,7 +286,13 @@ class ChatbotController extends ResourceController
             // ------------------------------------------------------------
 
             $conversationId = (int) (
-                $this->request->getPost('conversation_id') ?? 0
+                $this->request->getPost('conversation_id')
+                ?? $this->request->getPost('conversationId')
+                ?? $this->request->getPost('conversationID')
+                ?? $jsonInput['conversation_id']
+                ?? $jsonInput['conversationId']
+                ?? $jsonInput['conversationID']
+                ?? 0
             );
 
             if ($userId !== null) {
@@ -120,6 +317,96 @@ class ChatbotController extends ResourceController
                 $conversationId = 0;
             }
 
+            /*
+             * ------------------------------------------------------------
+             * HUMAN SUPPORT / HANDOFF
+             * ------------------------------------------------------------
+             *
+             * AI remains the normal first-line assistant. Once a resident
+             * requests a person, the conversation is placed in a queue.
+             * After a secretary/captain takes over, AI must NOT answer
+             * until the staff member returns the conversation to AI.
+             */
+            $supportMode = $conversationId > 0
+                ? $this->getConversationSupportMode($conversationId)
+                : self::SUPPORT_AI;
+
+            // Resident message while a human is actively handling it.
+            if (
+                $conversationId > 0 &&
+                $supportMode === self::SUPPORT_HUMAN
+            ) {
+                $saved = $this->saveSupportMessage(
+                    $conversationId,
+                    'user',
+                    $message,
+                    $userId
+                );
+
+                $this->touchConversationActivity($conversationId);
+
+                return $this->response->setJSON([
+                    'success' => true,
+                    'response' => null,
+                    'source' => 'human_support',
+                    'ai_available' => $this->apiKey !== '',
+                    'retrieved_documents' => 0,
+                    'conversation_id' => $conversationId,
+                    'live_data' => false,
+                    'support_mode' => self::SUPPORT_HUMAN,
+                    'message_saved' => $saved,
+                    'waiting_for_staff' => false
+                ]);
+            }
+
+            // Resident message while waiting for a staff member.
+            if (
+                $conversationId > 0 &&
+                $supportMode === self::SUPPORT_WAITING_HUMAN
+            ) {
+                $saved = $this->saveSupportMessage(
+                    $conversationId,
+                    'user',
+                    $message,
+                    $userId
+                );
+
+                $this->touchConversationActivity($conversationId);
+
+                return $this->response->setJSON([
+                    'success' => true,
+                    'response' => 'Your message has been added to the support conversation. Please wait for a Barangay support staff member to respond.',
+                    'source' => 'human_support_queue',
+                    'ai_available' => $this->apiKey !== '',
+                    'retrieved_documents' => 0,
+                    'conversation_id' => $conversationId,
+                    'live_data' => false,
+                    'support_mode' => self::SUPPORT_WAITING_HUMAN,
+                    'message_saved' => $saved,
+                    'waiting_for_staff' => true
+                ]);
+            }
+
+            // Closed support conversations remain closed. The resident can
+            // still read the history but must start a new conversation to use
+            // AI or request human support again.
+            if (
+                $conversationId > 0 &&
+                $supportMode === self::SUPPORT_CLOSED
+            ) {
+                return $this->response->setJSON([
+                    'success' => true,
+                    'response' => 'This support conversation has been closed. Please start a new conversation for further assistance.',
+                    'source' => 'closed_support',
+                    'ai_available' => $this->apiKey !== '',
+                    'retrieved_documents' => 0,
+                    'conversation_id' => $conversationId,
+                    'live_data' => false,
+                    'support_mode' => self::SUPPORT_CLOSED,
+                    'waiting_for_staff' => false
+                ]);
+            }
+
             $history = $conversationId > 0
                 ? $this->getConversationMessages(
                     $conversationId,
@@ -138,6 +425,46 @@ class ChatbotController extends ResourceController
                 ' | conversation_id=' .
                 $conversationId
             );
+
+            // ------------------------------------------------------------
+            // SPECIFIC BIS SERVICE ROUTING
+            // ------------------------------------------------------------
+            // Business Permit belongs to the Resident Dashboard. Handle this
+            // intent explicitly so the assistant does not answer with the
+            // generic Barangay Clearance workflow.
+
+            if ($this->isBusinessPermitQuestion($message)) {
+
+                $businessPermitResponse =
+                    'To request a <strong>Business Permit</strong>:<br><br>' .
+                    '1. Go to your <strong>Resident Dashboard</strong>.<br>' .
+                    '2. Under <strong>Barangay Clearances</strong>, click <strong>Request Now</strong>.<br>' .
+                    '3. Click <strong>New Request</strong>.<br>' .
+                    '4. Select the <strong>Document Type</strong>.<br>' .
+                    '5. In the <strong>New Document Request</strong> window, choose <strong>Business Permit</strong>.<br>' .
+                    '6. Enter the <strong>Purpose</strong>.<br>' .
+                    '7. Click <strong>Submit Request</strong>.<br><br>' .
+                    'Your Business Permit request will then be recorded in the system and can be monitored through your requests.';
+
+                $this->saveConversationExchange(
+                    $conversationId,
+                    $message,
+                    $businessPermitResponse
+                );
+
+                $this->touchConversationActivity($conversationId);
+
+                return $this->response->setJSON([
+                    'success' => true,
+                    'response' => $businessPermitResponse,
+                    'source' => 'business_permit_dashboard',
+                    'ai_available' => $this->apiKey !== '',
+                    'retrieved_documents' => 1,
+                    'conversation_id' => $conversationId,
+                    'live_data' => false,
+                    'support_mode' => $supportMode
+                ]);
+            }
 
             // ------------------------------------------------------------
             // SIMPLE LOCAL QUESTIONS
@@ -361,6 +688,65 @@ class ChatbotController extends ResourceController
                     'source' => 'error',
                     'ai_available' => false
                 ]);
+        }
+    }
+
+    /**
+     * Safely read JSON request data without allowing CodeIgniter's
+     * IncomingRequest::getJSON() to throw when the request is form-encoded.
+     *
+     * The resident chatbot sends application/x-www-form-urlencoded data,
+     * while the staff support endpoints send application/json. This helper
+     * supports both request styles and quietly returns an empty array for
+     * malformed or non-JSON bodies.
+     */
+    protected function getJsonInput(): array
+    {
+        try {
+            $contentType = strtolower(
+                (string) $this->request->getHeaderLine('Content-Type')
+            );
+
+            if (!str_contains($contentType, 'application/json')) {
+                return [];
+            }
+
+            $rawBody = trim(
+                (string) $this->request->getBody()
+            );
+
+            if ($rawBody === '') {
+                return [];
+            }
+
+            $decoded = json_decode(
+                $rawBody,
+                true
+            );
+
+            if (
+                json_last_error() !== JSON_ERROR_NONE ||
+                !is_array($decoded)
+            ) {
+                log_message(
+                    'warning',
+                    'ChatbotController: invalid JSON payload ignored. Error=' .
+                    json_last_error_msg()
+                );
+
+                return [];
+            }
+
+            return $decoded;
+
+        } catch (\Throwable $e) {
+            log_message(
+                'warning',
+                'ChatbotController::getJsonInput error: ' .
+                $e->getMessage()
+            );
+
+            return [];
         }
     }
 
@@ -2119,6 +2505,48 @@ $latestMember = $db
     // SIMPLE QUESTIONS
     // ========================================================================
 
+    protected function isBusinessPermitQuestion(string $message): bool
+    {
+        $text = mb_strtolower(trim($message));
+
+        if ($text === '') {
+            return false;
+        }
+
+        $normalized = preg_replace(
+            '/[^\p{L}\p{N}\s]/u',
+            ' ',
+            $text
+        );
+
+        $normalized = preg_replace('/\s+/', ' ', trim($normalized));
+
+        $phrases = [
+            'business permit',
+            'business permit application',
+            'business permit request',
+            'apply for business permit',
+            'apply business permit',
+            'get business permit',
+            'how to get business permit',
+            'how do i get business permit',
+            'how can i get business permit',
+            'where can i get business permit',
+            'where to get business permit',
+            'request business permit',
+            'business permit dashboard',
+            'permit for business'
+        ];
+
+        foreach ($phrases as $phrase) {
+            if (mb_strpos($normalized, $phrase) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     protected function handleSimpleQuestion(
         string $message
     ): ?string {
@@ -2256,6 +2684,144 @@ $latestMember = $db
         return [
 
             [
+                'id' => 'business_permit',
+                'title' => 'Business Permit – Resident Dashboard',
+                'keys' => [
+                    'business permit',
+                    'business permit application',
+                    'business permit request',
+                    'apply business permit',
+                    'get business permit',
+                    'how to get business permit',
+                    'how do i get business permit',
+                    'how can i get business permit',
+                    'where to get business permit',
+                    'business permit dashboard',
+                    'permit dashboard',
+                    'business permit under dashboard',
+                    'business permit in dashboard'
+                ],
+                'content' =>
+                    'To request a Business Permit in the BIS: ' .
+                    '1. Go to the Resident Dashboard. ' .
+                    '2. Under Barangay Clearances, click Request Now. ' .
+                    '3. Click New Request. ' .
+                    '4. Select the Document Type. ' .
+                    '5. In the New Document Request window, choose Business Permit. ' .
+                    '6. Enter the Purpose. ' .
+                    '7. Click Submit Request. ' .
+                    'The Business Permit request is then recorded in the system and can be monitored through the user requests. ' .
+                    'Do not confuse this workflow with a generic Barangay Clearance request. ' .
+                    'Do not invent Business Permit requirements, fees, schedules, or approval steps that are not provided by the BIS.'
+            ],
+
+
+            [
+                'id' => 'barangay_certification',
+                'title' => 'Barangay Certification',
+                'keys' => [
+                    'barangay certification',
+                    'barangay certificate',
+                    'certificate of barangay certification',
+                    'request barangay certification',
+                    'get barangay certification',
+                    'how to get barangay certification',
+                    'how to request barangay certification'
+                ],
+                'content' =>
+                    'To request a Barangay Certification in the BIS: ' .
+                    '1. Go to the Resident Dashboard. ' .
+                    '2. Under Barangay Clearances, click Request Now. ' .
+                    '3. Click New Request. ' .
+                    '4. Select the Document Type. ' .
+                    '5. In the New Document Request window, choose Barangay Certification. ' .
+                    '6. Enter the Purpose. ' .
+                    '7. Click Submit Request. ' .
+                    'The requested certificate is then recorded in the system and can be monitored through the user requests. ' .
+                    'Do not invent additional requirements, fees, schedules, or approval steps that are not provided by the BIS.'
+            ],
+
+            [
+                'id' => 'certificate_of_indigency',
+                'title' => 'Certificate of Indigency – Resident Dashboard',
+                'keys' => [
+                    'certificate of indigency',
+                    'indigency certificate',
+                    'request indigency',
+                    'get indigency',
+                    'how to get indigency',
+                    'how to request indigency',
+                    'indigent certificate',
+                    'philhealth yakap indigency'
+                ],
+                'content' =>
+                    'To request a Certificate of Indigency in the BIS: ' .
+                    '1. Go to the Resident Dashboard. ' .
+                    '2. Under Barangay Clearances, click Request Now. ' .
+                    '3. Click New Request. ' .
+                    '4. Select the Document Type. ' .
+                    '5. In the New Document Request window, choose Certificate of Indigency. ' .
+                    '6. Enter the Purpose. ' .
+                    '7. Click Submit Request. ' .
+                    'The BIS also has an automatic household-income qualification: the total net monthly household income must be 12,000 pesos or below. ' .
+                    'If the household total income exceeds 12,000 pesos, the request is automatically rejected according to the current BIS configuration. ' .
+                    'The generated certificate may state the purpose supplied in the request, such as PhilHealth Assistance (YAKAP), when applicable. ' .
+                    'Do not invent additional requirements, fees, schedules, or approval steps that are not provided by the BIS.'
+            ],
+
+            [
+                'id' => 'business_permit_clearance',
+                'title' => 'Business Permit Clearance',
+                'keys' => [
+                    'business permit clearance',
+                    'business clearance',
+                    'barangay clearance for business permit',
+                    'clearance for business permit',
+                    'business permit clearance request',
+                    'business permit certificate'
+                ],
+                'content' =>
+                    'The BIS can generate a Business Permit Clearance after the user requests Business Permit through the dashboard. ' .
+                    'To request it: ' .
+                    '1. Go to the Resident Dashboard. ' .
+                    '2. Under Barangay Clearances, click Request Now. ' .
+                    '3. Click New Request. ' .
+                    '4. Select the Document Type. ' .
+                    '5. In the New Document Request window, choose Business Permit. ' .
+                    '6. Enter the Purpose. ' .
+                    '7. Click Submit Request. ' .
+                    'The generated document is a Business Permit Clearance for business permit application purposes. ' .
+                    'Do not confuse Business Permit with a generic personal Barangay Clearance.'
+            ],
+
+            [
+                'id' => 'solo_parent_certificate',
+                'title' => 'Solo Parent Certificate',
+                'keys' => [
+                    'solo parent certificate',
+                    'solo parent certification',
+                    'solo parent',
+                    'request solo parent certificate',
+                    'get solo parent certificate',
+                    'how to get solo parent certificate',
+                    'how to request solo parent certificate',
+                    'solo parent benefits',
+                    'ra 8972'
+                ],
+                'content' =>
+                    'To request a Solo Parent Certificate in the BIS: ' .
+                    '1. Go to the Resident Dashboard. ' .
+                    '2. Under Barangay Clearances, click Request Now. ' .
+                    '3. Click New Request. ' .
+                    '4. Select the Document Type. ' .
+                    '5. In the New Document Request window, choose Solo Parent Certificate. ' .
+                    '6. Enter the Purpose. ' .
+                    '7. Click Submit Request. ' .
+                    'The certificate is intended to support an application for solo parent benefits and may identify the applicant as a Solo Parent under Republic Act No. 8972. ' .
+                    'Do not invent additional eligibility requirements, fees, schedules, or approval steps that are not provided by the BIS.'
+            ],
+
+            [
                 'id' => 'account_registration',
                 'title' => 'Resident Account Registration',
                 'keys' => [
@@ -2371,11 +2937,16 @@ $latestMember = $db
                 ],
                 'content' =>
                     'The BIS has an automatic income qualification for a Certificate of Indigency. ' .
+                    'To request it: 1. Go to the Resident Dashboard. ' .
+                    '2. Under Barangay Clearances, click Request Now. ' .
+                    '3. Click New Request. ' .
+                    '4. Select the Document Type. ' .
+                    '5. In the New Document Request window, choose Certificate of Indigency. ' .
+                    '6. Enter the Purpose. ' .
+                    '7. Click Submit Request. ' .
                     'The household total net monthly income must be 12,000 pesos or below. ' .
-                    'If the household total income exceeds 12,000 pesos, the request is automatically rejected. ' .
-                    'The Certificate of Indigency is free of charge according to the current BIS configuration. ' .
-                    'To request it, log in, open My Clearances, select New Request, ' .
-                    'select Certificate of Indigency, and submit the request.'
+                    'If the household total income exceeds 12,000 pesos, the request is automatically rejected according to the current BIS configuration. ' .
+                    'The Certificate of Indigency is free of charge according to the current BIS configuration.'
             ],
 
             [
@@ -2388,10 +2959,16 @@ $latestMember = $db
                     'good moral certificate'
                 ],
                 'content' =>
-                    'To request a Certificate of Good Moral Character, log in to BIS, ' .
-                    'open My Clearances, click New Request, select Certificate of Good Moral, ' .
-                    'enter the purpose such as employment or scholarship, and submit the request. ' .
-                    'The system normally estimates processing within 1 to 2 business days.'
+                    'To request a Certificate of Good Moral Character in the BIS: ' .
+                    '1. Go to the Resident Dashboard. ' .
+                    '2. Under Barangay Clearances, click Request Now. ' .
+                    '3. Click New Request. ' .
+                    '4. Select the Document Type. ' .
+                    '5. In the New Document Request window, choose Certificate of Good Moral Character. ' .
+                    '6. Enter the Purpose. ' .
+                    '7. Click Submit Request. ' .
+                    'The system normally estimates processing within 1 to 2 business days. ' .
+                    'Do not invent additional requirements, fees, schedules, or approval steps that are not provided by the BIS.'
             ],
 
             [
@@ -2424,10 +3001,9 @@ $latestMember = $db
                     'document types'
                 ],
                 'content' =>
-                    'The BIS currently supports these document types: ' .
-                    'Barangay Clearance, Certificate of Residency, Certificate of Indigency, ' .
-                    'Certificate of Good Moral, and First Time Job Seeker Certificate. ' .
-                    'Residents can access these through My Clearances and New Request.'
+                    'The BIS dashboard may provide these document types/services: Barangay Clearance, Barangay Certification, Certificate of Residency, Certificate of Indigency, Certificate of Good Moral Character, First Time Job Seeker Certificate, Business Permit, and Solo Parent Certificate. ' .
+                    'Residents request supported documents through the Resident Dashboard, under Barangay Clearances, by clicking Request Now and then New Request. ' .
+                    'The exact Document Type options shown in the New Document Request window are the authoritative choices in the current BIS.'
             ],
 
             [
@@ -2696,9 +3272,7 @@ $latestMember = $db
         string $message
     ): array {
 
-        $query = mb_strtolower(
-            trim($message)
-        );
+        $query = mb_strtolower(trim($message));
 
         $normalized = preg_replace(
             '/[^\p{L}\p{N}\s]/u',
@@ -2706,44 +3280,73 @@ $latestMember = $db
             $query
         );
 
+        $normalized = preg_replace('/\s+/', ' ', trim($normalized));
+
         $queryWords = preg_split(
             '/\s+/',
-            trim($normalized)
+            $normalized,
+            -1,
+            PREG_SPLIT_NO_EMPTY
         );
 
-        $queryWords = array_filter(
+        $queryWords = array_values(array_filter(
             $queryWords,
             static function ($word) {
                 return mb_strlen($word) >= 2;
             }
+        ));
+
+        /*
+         * Business Permit is a specific BIS service under the Dashboard.
+         * Give this exact intent a strong priority so generic words such as
+         * "permit", "request", or "business" cannot cause the query to be
+         * incorrectly routed to Barangay Clearance.
+         */
+        $isBusinessPermitQuery = (
+            mb_strpos($normalized, 'business permit') !== false
         );
+
+        $priorityDocumentIds = [];
+
+        if ($isBusinessPermitQuery) {
+            $priorityDocumentIds = [
+                'business_permit',
+                'business_permit_clearance'
+            ];
+        } elseif (mb_strpos($normalized, 'barangay certification') !== false) {
+            $priorityDocumentIds = ['barangay_certification'];
+        } elseif (mb_strpos($normalized, 'certificate of indigency') !== false || mb_strpos($normalized, 'indigency certificate') !== false) {
+            $priorityDocumentIds = ['certificate_of_indigency', 'indigency'];
+        } elseif (mb_strpos($normalized, 'solo parent certificate') !== false || mb_strpos($normalized, 'solo parent') !== false) {
+            $priorityDocumentIds = ['solo_parent_certificate'];
+        } elseif (mb_strpos($normalized, 'good moral') !== false || mb_strpos($normalized, 'good moral character') !== false) {
+            $priorityDocumentIds = ['good_moral'];
+        }
 
         $results = [];
 
-        foreach (
-            $this->getKnowledgeBase() as $document
-        ) {
+        foreach ($this->getKnowledgeBase() as $document) {
 
             $score = 0;
+            $documentId = (string) ($document['id'] ?? '');
 
-            foreach (
-                $document['keys'] as $key
-            ) {
+            foreach ($document['keys'] as $key) {
 
-                $keyLower = mb_strtolower($key);
+                $keyLower = mb_strtolower(trim($key));
 
-                if ($query === $keyLower) {
-                    $score += 100;
+                if ($keyLower === '') {
                     continue;
                 }
 
-                if (
-                    mb_strpos(
-                        $query,
-                        $keyLower
-                    ) !== false
-                ) {
-                    $score += 50;
+                /* Exact complete query match gets the highest priority. */
+                if ($normalized === $keyLower) {
+                    $score += 1000;
+                    continue;
+                }
+
+                /* Exact phrase match is substantially stronger than generic word overlap. */
+                if (mb_strpos($normalized, $keyLower) !== false) {
+                    $score += 250;
                 }
 
                 $keyWords = preg_split(
@@ -2752,20 +3355,16 @@ $latestMember = $db
                         '/[^\p{L}\p{N}\s]/u',
                         ' ',
                         $keyLower
-                    )
+                    ),
+                    -1,
+                    PREG_SPLIT_NO_EMPTY
                 );
 
-                foreach (
-                    $keyWords as $keyWord
-                ) {
+                foreach ($keyWords as $keyWord) {
 
                     if (
                         mb_strlen($keyWord) >= 3 &&
-                        in_array(
-                            $keyWord,
-                            $queryWords,
-                            true
-                        )
+                        in_array($keyWord, $queryWords, true)
                     ) {
                         $score += 8;
                     }
@@ -2773,40 +3372,50 @@ $latestMember = $db
             }
 
             $content = mb_strtolower(
-                $document['title'] .
+                ($document['title'] ?? '') .
                 ' ' .
-                $document['content']
+                ($document['content'] ?? '')
             );
 
-            foreach (
-                $queryWords as $word
-            ) {
+            foreach ($queryWords as $word) {
 
                 if (
                     mb_strlen($word) >= 4 &&
-                    mb_strpos(
-                        $content,
-                        $word
-                    ) !== false
+                    mb_strpos($content, $word) !== false
                 ) {
                     $score += 2;
                 }
             }
 
+            /*
+             * Explicitly prioritize the Business Permit document whenever
+             * the query contains the exact phrase "business permit".
+             * Also penalize generic clearance retrieval for that query.
+             */
+            if ($isBusinessPermitQuery) {
+                if ($documentId === 'business_permit') {
+                    $score += 5000;
+                } elseif ($documentId === 'business_permit_clearance') {
+                    $score += 3500;
+                } elseif ($documentId === 'barangay_clearance') {
+                    $score -= 2500;
+                }
+            }
+
+            if (!empty($priorityDocumentIds)) {
+                if (in_array($documentId, $priorityDocumentIds, true)) {
+                    $score += 3500;
+                } elseif (in_array($documentId, ['available_documents'], true)) {
+                    $score -= 200;
+                }
+            }
+
             if ($score > 0) {
-
                 $results[] = [
-                    'id' =>
-                        $document['id'],
-
-                    'title' =>
-                        $document['title'],
-
-                    'content' =>
-                        $document['content'],
-
-                    'score' =>
-                        $score
+                    'id' => $documentId,
+                    'title' => $document['title'],
+                    'content' => $document['content'],
+                    'score' => $score
                 ];
             }
         }
@@ -2814,6 +3423,10 @@ $latestMember = $db
         usort(
             $results,
             static function ($a, $b) {
+                if ($a['score'] === $b['score']) {
+                    return strcmp($a['id'], $b['id']);
+                }
+
                 return $b['score'] <=> $a['score'];
             }
         );
@@ -2907,9 +3520,13 @@ PRIMARY RULES
 
 2. Use the provided BIS knowledge context for procedures and system information.
 
-3. When LIVE BIS DATABASE DATA is provided, it is the authoritative source for current census statistics.
+3. When a specific BIS service is identified in the knowledge context, do not substitute a different service merely because the user uses a related word.
 
-4. Never invent, estimate, or replace a live database figure with general knowledge.
+4. For Business Permit questions, follow the exact BIS workflow from the Business Permit – Resident Dashboard document: Resident Dashboard → Barangay Clearances → Request Now → New Request → Select the Document Type → choose Business Permit in the New Document Request window → enter Purpose → Submit Request. Do not replace this workflow with a generic Barangay Clearance procedure.
+
+5. When LIVE BIS DATABASE DATA is provided, it is the authoritative source for current census statistics.
+
+6. Never invent, estimate, or replace a live database figure with general knowledge.
 
 5. Only use live census information that is explicitly provided in LIVE BIS DATABASE DATA.
 
@@ -3367,6 +3984,11 @@ PROMPT;
                 $activeConversation !== null
             ) {
 
+                $activeConversation =
+                    $this->decorateConversationWithSupportState(
+                        $activeConversation
+                    );
+
                 $messages =
                     $this->messageModel
                         ->where(
@@ -3379,6 +4001,17 @@ PROMPT;
                         )
                         ->findAll();
             }
+
+            foreach ($conversations as &$conversationRow) {
+                $conversationRow =
+                    $this->decorateConversationWithSupportState(
+                        $conversationRow
+                    );
+            }
+            unset($conversationRow);
+
+            // Re-read the active row from the decorated list.
+            $activeConversation = $conversations[0] ?? null;
 
             return $this->response->setJSON([
                 'success' => true,
@@ -3462,10 +4095,17 @@ PROMPT;
                 )
                 ->findAll();
 
+        $conversation =
+            $this->decorateConversationWithSupportState(
+                $conversation
+            );
+
         return $this->response->setJSON([
             'success' => true,
             'conversation' => $conversation,
-            'messages' => $messages
+            'messages' => $messages,
+            'support_mode' => $conversation['support_mode'] ?? self::SUPPORT_AI,
+            'resident_online' => $conversation['resident_online'] ?? false
         ]);
     }
 
@@ -3506,6 +4146,8 @@ PROMPT;
                             'Unable to create a new conversation.'
                     ]);
             }
+
+            $this->initializeSupportColumnsForConversation((int) $id);
 
             $conversation =
                 $this->conversationModel->find(
@@ -3656,29 +4298,45 @@ PROMPT;
             $title = 'New conversation';
         }
 
-        $id =
-            $this->conversationModel->insert(
-                [
-                    'user_id' => $userId,
-                    'title' => $title
-                ],
-                true
+        try {
+            $id =
+                $this->conversationModel->insert(
+                    [
+                        'user_id' => $userId,
+                        'title' => $title
+                    ],
+                    true
+                );
+
+            if (!$id) {
+
+                log_message(
+                    'error',
+                    'Failed to create chatbot conversation for user ' .
+                    $userId
+                );
+
+                return null;
+            }
+
+            // The support columns are added by the chat-support migration.
+            // Updating them through the query builder avoids requiring an
+            // immediate change to ChatConversationModel::$allowedFields.
+            $this->initializeSupportColumnsForConversation((int) $id);
+
+            return $this->conversationModel->find(
+                $id
             );
 
-        if (!$id) {
+        } catch (\Throwable $e) {
 
             log_message(
                 'error',
-                'Failed to create chatbot conversation for user ' .
-                $userId
+                'getOrCreateConversation error: ' . $e->getMessage()
             );
 
             return null;
         }
-
-        return $this->conversationModel->find(
-            $id
-        );
     }
 
     protected function getConversationMessages(
@@ -3835,6 +4493,8 @@ PROMPT;
                         )
                 ]);
 
+            $this->touchConversationActivity($conversationId);
+
             log_message(
                 'info',
                 'Chat exchange saved successfully. ' .
@@ -3856,6 +4516,1566 @@ PROMPT;
                 $conversationId
             );
         }
+    }
+
+    // ========================================================================
+    // HUMAN / CUSTOMER SUPPORT
+    // ========================================================================
+
+    /**
+     * Determine whether a resident is asking to speak with a human staff member.
+     * This intentionally runs locally and does not consume an OpenRouter call.
+     */
+    protected function isHumanSupportRequest(string $message): bool
+    {
+        $text = mb_strtolower(trim($message));
+
+        if ($text === '') {
+            return false;
+        }
+
+        $patterns = [
+            'talk to a person',
+            'talk to person',
+            'talk to a human',
+            'talk to human',
+            'talk with a person',
+            'talk with a human',
+            'speak to a person',
+            'speak to a human',
+            'speak with a person',
+            'speak with a human',
+            'real person',
+            'real human',
+            'human support',
+            'human assistance',
+            'human agent',
+            'live support',
+            'live chat',
+            'customer support',
+            'customer service',
+            'talk to someone',
+            'talk with someone',
+            'speak to someone',
+            'speak with someone',
+            'i want to talk to someone',
+            'i want to speak to someone',
+            'can i talk to someone',
+            'can i speak to someone',
+            'may i talk to someone',
+            'may i speak to someone',
+            'talk to secretary',
+            'talk to the secretary',
+            'talk with secretary',
+            'talk with the secretary',
+            'speak to secretary',
+            'speak to the secretary',
+            'speak with secretary',
+            'speak with the secretary',
+            'contact secretary',
+            'contact the secretary',
+            'ask secretary',
+            'ask the secretary',
+            'secretary please',
+            'talk to admin',
+            'talk to the admin',
+            'talk with admin',
+            'talk with the admin',
+            'speak to admin',
+            'speak to the admin',
+            'speak with admin',
+            'speak with the admin',
+            'contact admin',
+            'contact the admin',
+            'ask admin',
+            'ask the admin',
+            'talk to captain',
+            'talk to the captain',
+            'talk with captain',
+            'talk with the captain',
+            'speak to captain',
+            'speak to the captain',
+            'speak with captain',
+            'speak with the captain',
+            'contact captain',
+            'contact the captain',
+            'ask captain',
+            'ask the captain',
+            'staff assistance',
+            'staff support',
+            'human please',
+            'person please',
+            'agent please',
+            'pwede makausap ang secretary',
+            'pwede makausap ang admin',
+            'pwede makausap ang kapitan',
+            'gusto ko makausap ang secretary',
+            'gusto ko makausap ang admin',
+            'gusto ko makausap ang kapitan',
+            'gusto kong makausap ang secretary',
+            'gusto kong makausap ang admin',
+            'gusto kong makausap ang kapitan',
+            'kausapin ang secretary',
+            'kausapin ang admin',
+            'kausapin ang kapitan',
+            'makakausap ba ang secretary',
+            'makakausap ba ang admin',
+            'makakausap ba ang kapitan'
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (mb_strpos($text, $pattern) !== false) {
+                log_message(
+                    'info',
+                    'Human-support intent detected. message=' . $message . ' | matched=' . $pattern
+                );
+                return true;
+            }
+        }
+
+        // Also catch natural variations such as:
+        // "I want to talk to the secretary" / "Can I speak with the admin?"
+        // by normalizing common filler words around a staff role.
+        $normalized = preg_replace(
+            '/\b(the|a|an)\s+/',
+            '',
+            $text
+        );
+
+        $normalized = trim((string) $normalized);
+
+        foreach ([
+            'talk to secretary',
+            'talk with secretary',
+            'speak to secretary',
+            'speak with secretary',
+            'contact secretary',
+            'ask secretary',
+            'talk to admin',
+            'talk with admin',
+            'speak to admin',
+            'speak with admin',
+            'contact admin',
+            'ask admin',
+            'talk to captain',
+            'talk with captain',
+            'speak to captain',
+            'speak with captain',
+            'contact captain',
+            'ask captain'
+        ] as $pattern) {
+            if (mb_strpos($normalized, $pattern) !== false) {
+                return true;
+            }
+        }
+
+        // Exact generic terms only. Avoid treating a normal sentence such as
+        // "What is an administrative requirement?" as a handoff request.
+        $exactTerms = [
+            'human',
+            'secretary',
+            'admin',
+            'captain',
+            'staff',
+            'agent'
+        ];
+
+        return in_array($text, $exactTerms, true);
+    }
+
+    /**
+     * Check whether the current role is allowed to handle customer support.
+     */
+    protected function canAccessHumanSupport(?string $role): bool
+    {
+        return in_array(
+            strtolower(trim((string) $role)),
+            [
+                'secretary',
+                'captain'
+            ],
+            true
+        );
+    }
+
+    /**
+     * Get a conversation's support mode.
+     * Older conversations are treated as AI conversations when the support
+     * columns do not exist yet.
+     */
+    protected function getConversationSupportMode(int $conversationId): string
+    {
+        if ($conversationId <= 0) {
+            return self::SUPPORT_AI;
+        }
+
+        try {
+            $db = \Config\Database::connect();
+
+            $fields = $db->getFieldNames('chat_conversations');
+
+            if (!is_array($fields) || !in_array('support_mode', $fields, true)) {
+                return self::SUPPORT_AI;
+            }
+
+            $row = $db->table('chat_conversations')
+                ->select('support_mode')
+                ->where('id', $conversationId)
+                ->get()
+                ->getRowArray();
+
+            $mode = strtolower(trim((string) ($row['support_mode'] ?? '')));
+
+            return in_array(
+                $mode,
+                [
+                    self::SUPPORT_AI,
+                    self::SUPPORT_WAITING_HUMAN,
+                    self::SUPPORT_HUMAN,
+                    self::SUPPORT_CLOSED
+                ],
+                true
+            )
+                ? $mode
+                : self::SUPPORT_AI;
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'getConversationSupportMode error: ' . $e->getMessage()
+            );
+
+            return self::SUPPORT_AI;
+        }
+    }
+
+    /**
+     * Safely initialize support metadata for a conversation.
+     * This does nothing until the support migration has added the columns.
+     */
+    protected function initializeSupportColumnsForConversation(int $conversationId): void
+    {
+        if ($conversationId <= 0) {
+            return;
+        }
+
+        try {
+            $db = \Config\Database::connect();
+            $fields = $db->getFieldNames('chat_conversations');
+
+            if (!is_array($fields)) {
+                return;
+            }
+
+            $data = [];
+
+            if (in_array('support_mode', $fields, true)) {
+                $data['support_mode'] = self::SUPPORT_AI;
+            }
+
+            if (in_array('assigned_staff_id', $fields, true)) {
+                $data['assigned_staff_id'] = null;
+            }
+
+            if (in_array('last_activity_at', $fields, true)) {
+                $data['last_activity_at'] = date('Y-m-d H:i:s');
+            }
+
+            if (in_array('closed_at', $fields, true)) {
+                $data['closed_at'] = null;
+            }
+
+            if (!empty($data)) {
+                $db->table('chat_conversations')
+                    ->where('id', $conversationId)
+                    ->update($data);
+            }
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'initializeSupportColumnsForConversation error: ' .
+                $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Update a conversation's support state without requiring changes to the
+     * ChatConversationModel allowedFields configuration.
+     */
+    protected function updateConversationSupportMode(
+        int $conversationId,
+        string $mode,
+        ?int $staffId = null
+    ): bool {
+        if ($conversationId <= 0) {
+            return false;
+        }
+
+        if (!in_array(
+            $mode,
+            [
+                self::SUPPORT_AI,
+                self::SUPPORT_WAITING_HUMAN,
+                self::SUPPORT_HUMAN,
+                self::SUPPORT_CLOSED
+            ],
+            true
+        )) {
+            return false;
+        }
+
+        try {
+            $db = \Config\Database::connect();
+            $fields = $db->getFieldNames('chat_conversations');
+
+            if (!is_array($fields)) {
+                return false;
+            }
+
+            $data = [];
+
+            if (!in_array('support_mode', $fields, true)) {
+                return false;
+            }
+
+            $data['support_mode'] = $mode;
+
+            if (in_array('assigned_staff_id', $fields, true)) {
+                $data['assigned_staff_id'] = $staffId;
+            }
+
+            if (in_array('last_activity_at', $fields, true)) {
+                $data['last_activity_at'] = date('Y-m-d H:i:s');
+            }
+
+            if (in_array('closed_at', $fields, true)) {
+                $data['closed_at'] =
+                    $mode === self::SUPPORT_CLOSED
+                        ? date('Y-m-d H:i:s')
+                        : null;
+            }
+
+            if (!empty($data)) {
+                $db->table('chat_conversations')
+                    ->where('id', $conversationId)
+                    ->update($data);
+            }
+
+            // Keep existing updated_at behavior.
+            $db->table('chat_conversations')
+                ->where('id', $conversationId)
+                ->update([
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
+
+            return true;
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'updateConversationSupportMode error: ' . $e->getMessage()
+            );
+
+            return false;
+        }
+    }
+
+    /**
+     * Update the last activity timestamp. This is used by the staff dashboard
+     * to determine whether a resident has been active recently.
+     */
+    protected function touchConversationActivity(int $conversationId): void
+    {
+        if ($conversationId <= 0) {
+            return;
+        }
+
+        try {
+            $db = \Config\Database::connect();
+            $fields = $db->getFieldNames('chat_conversations');
+
+            if (is_array($fields) && in_array('last_activity_at', $fields, true)) {
+                $db->table('chat_conversations')
+                    ->where('id', $conversationId)
+                    ->update([
+                        'last_activity_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ]);
+            } else {
+                $db->table('chat_conversations')
+                    ->where('id', $conversationId)
+                    ->update([
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ]);
+            }
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'touchConversationActivity error: ' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Decorate a conversation with support information.
+     */
+    protected function decorateConversationWithSupportState(array $conversation): array
+    {
+        $id = (int) ($conversation['id'] ?? 0);
+
+        $conversation['support_mode'] =
+            $this->getConversationSupportMode($id);
+
+        // Add a display name for the resident when the users table is available.
+        // The support UI can still fall back to the user ID/username if a
+        // name column is unavailable.
+        $conversation['resident_name'] = null;
+        try {
+            $db = \Config\Database::connect();
+            $userId = (int) ($conversation['user_id'] ?? 0);
+            if ($userId > 0 && $db->tableExists('users')) {
+                $userFields = $db->getFieldNames('users');
+                if (is_array($userFields)) {
+                    $select = [];
+                    foreach (['first_name', 'middle_name', 'last_name', 'username'] as $field) {
+                        if (in_array($field, $userFields, true)) {
+                            $select[] = $field;
+                        }
+                    }
+                    if (!empty($select)) {
+                        $user = $db->table('users')
+                            ->select(implode(',', $select))
+                            ->where('id', $userId)
+                            ->get()
+                            ->getRowArray();
+                        if ($user) {
+                            $nameParts = [];
+                            foreach (['first_name', 'middle_name', 'last_name'] as $field) {
+                                if (!empty($user[$field])) {
+                                    $nameParts[] = trim((string) $user[$field]);
+                                }
+                            }
+                            $conversation['resident_name'] = trim(implode(' ', $nameParts));
+                            if ($conversation['resident_name'] === '' && !empty($user['username'])) {
+                                $conversation['resident_name'] = (string) $user['username'];
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $conversation['resident_name'] = null;
+        }
+
+        try {
+            $db = \Config\Database::connect();
+            $fields = $db->getFieldNames('chat_conversations');
+
+            if (is_array($fields) && in_array('assigned_staff_id', $fields, true)) {
+                $row = $db->table('chat_conversations')
+                    ->select('assigned_staff_id')
+                    ->where('id', $id)
+                    ->get()
+                    ->getRowArray();
+
+                $conversation['assigned_staff_id'] =
+                    !empty($row['assigned_staff_id'])
+                        ? (int) $row['assigned_staff_id']
+                        : null;
+            } else {
+                $conversation['assigned_staff_id'] = null;
+            }
+
+            $lastActivity = null;
+
+            if (is_array($fields) && in_array('last_activity_at', $fields, true)) {
+                $row = $db->table('chat_conversations')
+                    ->select('last_activity_at')
+                    ->where('id', $id)
+                    ->get()
+                    ->getRowArray();
+
+                $lastActivity = $row['last_activity_at'] ?? null;
+            }
+
+            $conversation['last_activity_at'] = $lastActivity;
+            $conversation['resident_online'] =
+                $this->isRecentConversationActivity($lastActivity);
+
+        } catch (\Throwable $e) {
+            $conversation['assigned_staff_id'] = null;
+            $conversation['last_activity_at'] = null;
+            $conversation['resident_online'] = false;
+        }
+
+        return $conversation;
+    }
+
+    protected function isRecentConversationActivity(?string $timestamp): bool
+    {
+        if (!$timestamp) {
+            return false;
+        }
+
+        $time = strtotime($timestamp);
+
+        if ($time === false) {
+            return false;
+        }
+
+        return (time() - $time) <= $this->onlineActivityWindow;
+    }
+
+    /**
+     * Save one message directly to the database. Direct insertion is used here
+     * so that adding the 'staff' sender does not require the existing
+     * ChatMessageModel::$allowedFields to be changed first.
+     */
+    protected function saveSupportMessage(
+        int $conversationId,
+        string $sender,
+        string $message,
+        ?int $senderUserId = null
+    ): bool {
+        if ($conversationId <= 0 || trim($message) === '') {
+            return false;
+        }
+
+        $allowedSenders = [
+            'user',
+            'assistant',
+            'staff'
+        ];
+
+        if (!in_array($sender, $allowedSenders, true)) {
+            return false;
+        }
+
+        try {
+            $db = \Config\Database::connect();
+            $fields = $db->getFieldNames('chat_messages');
+
+            if (!is_array($fields)) {
+                return false;
+            }
+
+            $data = [
+                'conversation_id' => $conversationId,
+                'sender' => $sender,
+                'message' => $message
+            ];
+
+            if (
+                $senderUserId !== null &&
+                in_array('sender_user_id', $fields, true)
+            ) {
+                $data['sender_user_id'] = $senderUserId;
+            }
+
+            $db->table('chat_messages')->insert($data);
+
+            $insertId = $db->insertID();
+
+            $this->touchConversationActivity($conversationId);
+
+            return $insertId > 0 || $db->affectedRows() > 0;
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'saveSupportMessage error: ' . $e->getMessage() .
+                ' | conversation_id=' . $conversationId
+            );
+
+            return false;
+        }
+    }
+
+    /**
+     * Staff/support conversation queue.
+     */
+    public function getSupportConversations()
+    {
+        $staffId = $this->getAuthenticatedUserId();
+        $role = $this->getCurrentUserRole();
+
+        if ($staffId === null) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Please log in first.'
+                ]);
+        }
+
+        if (!$this->canAccessHumanSupport($role)) {
+            return $this->response
+                ->setStatusCode(403)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'You are not authorized to access customer support.'
+                ]);
+        }
+
+        try {
+            $db = \Config\Database::connect();
+            $fields = $db->getFieldNames('chat_conversations');
+
+            $builder = $db->table('chat_conversations');
+            $builder->select('*');
+
+            if (is_array($fields) && in_array('support_mode', $fields, true)) {
+                $builder->whereIn(
+                    'support_mode',
+                    [
+                        self::SUPPORT_WAITING_HUMAN,
+                        self::SUPPORT_HUMAN
+                    ]
+                );
+            } else {
+                return $this->response->setJSON([
+                    'success' => true,
+                    'conversations' => [],
+                    'support_enabled' => false,
+                    'message' => 'Human support database fields are not installed yet.'
+                ]);
+            }
+
+            $builder->orderBy('updated_at', 'DESC');
+            $conversations = $builder->get()->getResultArray();
+
+            foreach ($conversations as &$conversation) {
+                $conversation =
+                    $this->decorateConversationWithSupportState($conversation);
+
+                // Most recent message preview.
+                $latestMessage = $db->table('chat_messages')
+                    ->select('sender, message, created_at')
+                    ->where(
+                        'conversation_id',
+                        (int) $conversation['id']
+                    )
+                    ->orderBy('created_at', 'DESC')
+                    ->limit(1)
+                    ->get()
+                    ->getRowArray();
+
+                $conversation['latest_message'] =
+                    $latestMessage ?: null;
+            }
+            unset($conversation);
+
+            return $this->response->setJSON([
+                'success' => true,
+                'support_enabled' => true,
+                'conversations' => $conversations
+            ]);
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'getSupportConversations error: ' . $e->getMessage()
+            );
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unable to load support conversations.'
+                ]);
+        }
+    }
+
+    /**
+     * Staff opens a support conversation.
+     */
+    public function getSupportConversation(int $id = 0)
+    {
+        $staffId = $this->getAuthenticatedUserId();
+        $role = $this->getCurrentUserRole();
+
+        if ($staffId === null) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Please log in first.'
+                ]);
+        }
+
+        if (!$this->canAccessHumanSupport($role)) {
+            return $this->response
+                ->setStatusCode(403)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unauthorized.'
+                ]);
+        }
+
+        if ($id <= 0) {
+            $json = $this->getJsonInput();
+            $json = is_array($json) ? $json : [];
+
+            $id = (int) (
+                $this->request->getGet('conversation_id')
+                ?? $this->request->getGet('conversationId')
+                ?? $json['conversation_id']
+                ?? $json['conversationId']
+                ?? 0
+            );
+        }
+
+        if ($id <= 0) {
+            return $this->response
+                ->setStatusCode(400)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Invalid conversation.'
+                ]);
+        }
+
+        try {
+            $db = \Config\Database::connect();
+
+            $conversation = $db->table('chat_conversations')
+                ->where('id', $id)
+                ->get()
+                ->getRowArray();
+
+            if (!$conversation) {
+                return $this->response
+                    ->setStatusCode(404)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Conversation not found.'
+                    ]);
+            }
+
+            $conversation =
+                $this->decorateConversationWithSupportState($conversation);
+
+            $messages = $db->table('chat_messages')
+                ->where('conversation_id', $id)
+                ->orderBy('created_at', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            return $this->response->setJSON([
+                'success' => true,
+                'conversation' => $conversation,
+                'messages' => $messages,
+                'support_mode' => $conversation['support_mode']
+            ]);
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'getSupportConversation error: ' . $e->getMessage()
+            );
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unable to load support conversation.'
+                ]);
+        }
+    }
+
+    /**
+     * Resident checks the current human-support state and retrieves the
+     * current conversation messages. This endpoint is intentionally limited
+     * to the authenticated owner of the conversation.
+     */
+    public function getSupportStatus()
+    {
+        $userId = $this->getAuthenticatedUserId();
+
+        if ($userId === null) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Please log in first.'
+                ]);
+        }
+
+        try {
+            $json = $this->getJsonInput();
+            $json = is_array($json) ? $json : [];
+
+            $conversationId = (int) (
+                $this->request->getGet('conversation_id')
+                ?? $this->request->getGet('conversationId')
+                ?? $this->request->getPost('conversation_id')
+                ?? $this->request->getPost('conversationId')
+                ?? $json['conversation_id']
+                ?? $json['conversationId']
+                ?? 0
+            );
+
+            if ($conversationId <= 0) {
+                return $this->response
+                    ->setStatusCode(400)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Invalid conversation.'
+                    ]);
+            }
+
+            $db = \Config\Database::connect();
+
+            $conversation = $db->table('chat_conversations')
+                ->where('id', $conversationId)
+                ->where('user_id', $userId)
+                ->get()
+                ->getRowArray();
+
+            if (!$conversation) {
+                return $this->response
+                    ->setStatusCode(404)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Conversation not found.'
+                    ]);
+            }
+
+            $conversation =
+                $this->decorateConversationWithSupportState($conversation);
+
+            $messages = $db->table('chat_messages')
+                ->where('conversation_id', $conversationId)
+                ->orderBy('created_at', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            $mode = $conversation['support_mode'] ?? self::SUPPORT_AI;
+
+            return $this->response->setJSON([
+                'success' => true,
+                'conversation_id' => $conversationId,
+                'support_mode' => $mode,
+                'assigned_staff_id' =>
+                    $conversation['assigned_staff_id'] ?? null,
+                'resident_online' =>
+                    $conversation['resident_online'] ?? false,
+                'last_activity_at' =>
+                    $conversation['last_activity_at'] ?? null,
+                'messages' => $messages,
+                'conversation' => $conversation
+            ]);
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'getSupportStatus error: ' . $e->getMessage()
+            );
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unable to check support status.'
+                ]);
+        }
+    }
+
+    /**
+     * Resident heartbeat.
+     * Call this every 10-15 seconds while the resident has the chat open.
+     * It updates last_activity_at without adding a chat message.
+     */
+    public function heartbeat()
+    {
+        $userId = $this->getAuthenticatedUserId();
+
+        if ($userId === null) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Please log in first.'
+                ]);
+        }
+
+        try {
+            $input = $this->getJsonInput() ?? [];
+            $conversationId = (int) (
+                $input['conversation_id'] ??
+                $this->request->getPost('conversation_id') ??
+                0
+            );
+
+            if ($conversationId <= 0) {
+                return $this->response->setJSON([
+                    'success' => true,
+                    'resident_online' => false
+                ]);
+            }
+
+            $conversation = $this->conversationModel
+                ->where('id', $conversationId)
+                ->where('user_id', $userId)
+                ->first();
+
+            if ($conversation === null) {
+                return $this->response
+                    ->setStatusCode(404)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Conversation not found.'
+                    ]);
+            }
+
+            $this->touchConversationActivity($conversationId);
+
+            return $this->response->setJSON([
+                'success' => true,
+                'conversation_id' => $conversationId,
+                'resident_online' => true,
+                'support_mode' => $this->getConversationSupportMode($conversationId)
+            ]);
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'Chat heartbeat error: ' . $e->getMessage()
+            );
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unable to update chat activity.'
+                ]);
+        }
+    }
+
+    /**
+     * Staff takes ownership of a waiting conversation.
+     */
+    public function takeOverConversation()
+    {
+        $staffId = $this->getAuthenticatedUserId();
+        $role = $this->getCurrentUserRole();
+
+        if ($staffId === null) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Please log in first.'
+                ]);
+        }
+
+        if (!$this->canAccessHumanSupport($role)) {
+            return $this->response
+                ->setStatusCode(403)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unauthorized.'
+                ]);
+        }
+
+        try {
+            $input = $this->getJsonInput() ?? [];
+
+            $conversationId = (int) (
+                $input['conversation_id'] ?? 0
+            );
+
+            if ($conversationId <= 0) {
+                return $this->response
+                    ->setStatusCode(400)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Invalid conversation.'
+                    ]);
+            }
+
+            $db = \Config\Database::connect();
+
+            $conversation = $db->table('chat_conversations')
+                ->where('id', $conversationId)
+                ->get()
+                ->getRowArray();
+
+            if (!$conversation) {
+                return $this->response
+                    ->setStatusCode(404)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Conversation not found.'
+                    ]);
+            }
+
+            $mode = $this->getConversationSupportMode($conversationId);
+
+            // Another staff member already owns the conversation.
+            $assignedStaffId =
+                isset($conversation['assigned_staff_id'])
+                    ? (int) $conversation['assigned_staff_id']
+                    : 0;
+
+            if (
+                $mode === self::SUPPORT_HUMAN &&
+                $assignedStaffId > 0 &&
+                $assignedStaffId !== $staffId
+            ) {
+                return $this->response
+                    ->setStatusCode(409)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'This conversation is already being handled by another staff member.'
+                    ]);
+            }
+
+            if ($mode === self::SUPPORT_CLOSED) {
+                return $this->response
+                    ->setStatusCode(409)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'This conversation has been closed.'
+                    ]);
+            }
+
+            $updated = $this->updateConversationSupportMode(
+                $conversationId,
+                self::SUPPORT_HUMAN,
+                $staffId
+            );
+
+            if (!$updated) {
+                return $this->response
+                    ->setStatusCode(500)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Unable to take over the conversation. Please make sure the chat support migration is installed.'
+                    ]);
+            }
+
+            $joinMessage =
+                'A Barangay support staff member has joined the conversation.';
+
+            $this->saveSupportMessage(
+                $conversationId,
+                'assistant',
+                $joinMessage,
+                null
+            );
+
+            return $this->response->setJSON([
+                'success' => true,
+                'support_mode' => self::SUPPORT_HUMAN,
+                'assigned_staff_id' => $staffId
+            ]);
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'takeOverConversation error: ' . $e->getMessage()
+            );
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unable to take over conversation.'
+                ]);
+        }
+    }
+
+    /**
+     * Staff sends a real human message to the resident.
+     */
+    public function sendStaffMessage()
+    {
+        $staffId = $this->getAuthenticatedUserId();
+        $role = $this->getCurrentUserRole();
+
+        if ($staffId === null) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Please log in first.'
+                ]);
+        }
+
+        if (!$this->canAccessHumanSupport($role)) {
+            return $this->response
+                ->setStatusCode(403)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unauthorized.'
+                ]);
+        }
+
+        try {
+            $input = $this->getJsonInput() ?? [];
+
+            $conversationId = (int) (
+                $input['conversation_id'] ?? 0
+            );
+
+            $message = trim(
+                (string) ($input['message'] ?? '')
+            );
+
+            if ($conversationId <= 0 || $message === '') {
+                return $this->response
+                    ->setStatusCode(400)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Conversation and message are required.'
+                    ]);
+            }
+
+            if (mb_strlen($message) > 2000) {
+                return $this->response
+                    ->setStatusCode(400)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Please keep your message below 2,000 characters.'
+                    ]);
+            }
+
+            $db = \Config\Database::connect();
+
+            $conversation = $db->table('chat_conversations')
+                ->where('id', $conversationId)
+                ->get()
+                ->getRowArray();
+
+            if (!$conversation) {
+                return $this->response
+                    ->setStatusCode(404)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Conversation not found.'
+                    ]);
+            }
+
+            $mode = $this->getConversationSupportMode($conversationId);
+
+            if ($mode !== self::SUPPORT_HUMAN) {
+                return $this->response
+                    ->setStatusCode(409)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'This conversation is not currently under human support.',
+                        'support_mode' => $mode
+                    ]);
+            }
+
+            $assignedStaffId =
+                isset($conversation['assigned_staff_id'])
+                    ? (int) $conversation['assigned_staff_id']
+                    : 0;
+
+            if (
+                $assignedStaffId > 0 &&
+                $assignedStaffId !== $staffId
+            ) {
+                return $this->response
+                    ->setStatusCode(403)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'This conversation is assigned to another staff member.'
+                    ]);
+            }
+
+            $saved = $this->saveSupportMessage(
+                $conversationId,
+                'staff',
+                $message,
+                $staffId
+            );
+
+            if (!$saved) {
+                return $this->response
+                    ->setStatusCode(500)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Unable to save your message.'
+                    ]);
+            }
+
+            return $this->response->setJSON([
+                'success' => true,
+                'conversation_id' => $conversationId,
+                'sender' => 'staff',
+                'message' => $message,
+                'support_mode' => self::SUPPORT_HUMAN
+            ]);
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'sendStaffMessage error: ' . $e->getMessage()
+            );
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unable to send your message.'
+                ]);
+        }
+    }
+
+    /**
+     * Return the conversation from human support to AI.
+     */
+    public function returnToAI()
+    {
+        $staffId = $this->getAuthenticatedUserId();
+        $role = $this->getCurrentUserRole();
+
+        if ($staffId === null) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Please log in first.'
+                ]);
+        }
+
+        if (!$this->canAccessHumanSupport($role)) {
+            return $this->response
+                ->setStatusCode(403)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unauthorized.'
+                ]);
+        }
+
+        try {
+            $input = $this->getJsonInput() ?? [];
+            $conversationId = (int) (
+                $input['conversation_id'] ?? 0
+            );
+
+            if ($conversationId <= 0) {
+                return $this->response
+                    ->setStatusCode(400)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Invalid conversation.'
+                    ]);
+            }
+
+            $db = \Config\Database::connect();
+            $conversation = $db->table('chat_conversations')
+                ->where('id', $conversationId)
+                ->get()
+                ->getRowArray();
+
+            if (!$conversation) {
+                return $this->response
+                    ->setStatusCode(404)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Conversation not found.'
+                    ]);
+            }
+
+            $assignedStaffId =
+                isset($conversation['assigned_staff_id'])
+                    ? (int) $conversation['assigned_staff_id']
+                    : 0;
+
+            if (
+                $assignedStaffId > 0 &&
+                $assignedStaffId !== $staffId
+            ) {
+                return $this->response
+                    ->setStatusCode(403)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'This conversation is assigned to another staff member.'
+                    ]);
+            }
+
+            if (
+                $this->getConversationSupportMode($conversationId) !==
+                self::SUPPORT_HUMAN
+            ) {
+                return $this->response
+                    ->setStatusCode(409)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'This conversation is not under human support.'
+                    ]);
+            }
+
+            $updated = $this->updateConversationSupportMode(
+                $conversationId,
+                self::SUPPORT_AI,
+                null
+            );
+
+            if (!$updated) {
+                return $this->response
+                    ->setStatusCode(500)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Unable to return the conversation to AI.'
+                    ]);
+            }
+
+            $message =
+                'The conversation has been returned to the BIS Assistant. ' .
+                'I can continue helping you with BIS information and services.';
+
+            $this->saveSupportMessage(
+                $conversationId,
+                'assistant',
+                $message,
+                null
+            );
+
+            return $this->response->setJSON([
+                'success' => true,
+                'support_mode' => self::SUPPORT_AI,
+                'response' => $message
+            ]);
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'returnToAI error: ' . $e->getMessage()
+            );
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unable to return the conversation to AI.'
+                ]);
+        }
+    }
+
+    /**
+     * Close a human-support conversation.
+     */
+    public function closeSupportConversation()
+    {
+        $staffId = $this->getAuthenticatedUserId();
+        $role = $this->getCurrentUserRole();
+
+        if ($staffId === null) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Please log in first.'
+                ]);
+        }
+
+        if (!$this->canAccessHumanSupport($role)) {
+            return $this->response
+                ->setStatusCode(403)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unauthorized.'
+                ]);
+        }
+
+        try {
+            $input = $this->getJsonInput() ?? [];
+            $conversationId = (int) (
+                $input['conversation_id'] ?? 0
+            );
+
+            if ($conversationId <= 0) {
+                return $this->response
+                    ->setStatusCode(400)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Invalid conversation.'
+                    ]);
+            }
+
+            $db = \Config\Database::connect();
+            $conversation = $db->table('chat_conversations')
+                ->where('id', $conversationId)
+                ->get()
+                ->getRowArray();
+
+            if (!$conversation) {
+                return $this->response
+                    ->setStatusCode(404)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Conversation not found.'
+                    ]);
+            }
+
+            $assignedStaffId =
+                isset($conversation['assigned_staff_id'])
+                    ? (int) $conversation['assigned_staff_id']
+                    : 0;
+
+            if (
+                $assignedStaffId > 0 &&
+                $assignedStaffId !== $staffId
+            ) {
+                return $this->response
+                    ->setStatusCode(403)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'This conversation is assigned to another staff member.'
+                    ]);
+            }
+
+            $updated = $this->updateConversationSupportMode(
+                $conversationId,
+                self::SUPPORT_CLOSED,
+                null
+            );
+
+            if (!$updated) {
+                return $this->response
+                    ->setStatusCode(500)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Unable to close the support conversation.'
+                    ]);
+            }
+
+            $message =
+                'This support conversation has been closed. ' .
+                'You may start a new conversation with the BIS Assistant if you need further assistance.';
+
+            $this->saveSupportMessage(
+                $conversationId,
+                'assistant',
+                $message,
+                null
+            );
+
+            return $this->response->setJSON([
+                'success' => true,
+                'support_mode' => self::SUPPORT_CLOSED,
+                'response' => $message
+            ]);
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'closeSupportConversation error: ' . $e->getMessage()
+            );
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unable to close the support conversation.'
+                ]);
+        }
+    }
+
+    /**
+     * Reopen a previously closed conversation for human support.
+     */
+    public function reopenSupportConversation()
+    {
+        $staffId = $this->getAuthenticatedUserId();
+        $role = $this->getCurrentUserRole();
+
+        if ($staffId === null) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Please log in first.'
+                ]);
+        }
+
+        if (!$this->canAccessHumanSupport($role)) {
+            return $this->response
+                ->setStatusCode(403)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unauthorized.'
+                ]);
+        }
+
+        try {
+            $input = $this->getJsonInput() ?? [];
+            $conversationId = (int) (
+                $input['conversation_id'] ?? 0
+            );
+
+            if ($conversationId <= 0) {
+                return $this->response
+                    ->setStatusCode(400)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Invalid conversation.'
+                    ]);
+            }
+
+            $updated = $this->updateConversationSupportMode(
+                $conversationId,
+                self::SUPPORT_WAITING_HUMAN,
+                null
+            );
+
+            if (!$updated) {
+                return $this->response
+                    ->setStatusCode(500)
+                    ->setJSON([
+                        'success' => false,
+                        'response' => 'Unable to reopen the support conversation.'
+                    ]);
+            }
+
+            return $this->response->setJSON([
+                'success' => true,
+                'support_mode' => self::SUPPORT_WAITING_HUMAN
+            ]);
+
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'reopenSupportConversation error: ' . $e->getMessage()
+            );
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'success' => false,
+                    'response' => 'Unable to reopen the support conversation.'
+                ]);
+        }
+    }
+
+    /**
+     * Backward-compatible aliases for older route definitions.
+     */
+    public function getSupportRequests()
+    {
+        return $this->getSupportConversations();
+    }
+
+    public function acceptHumanSupport()
+    {
+        return $this->takeOverConversation();
+    }
+
+    public function humanChat()
+    {
+        return $this->sendStaffMessage();
+    }
+
+    public function closeHumanSupport()
+    {
+        return $this->closeSupportConversation();
     }
 
     // ========================================================================

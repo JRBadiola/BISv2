@@ -1,21 +1,17 @@
-<?php
-/**
- * ============================================================
- * DASHBOARD TOPBAR + BIS AI CHATBOT
- * ============================================================
- */
-?>
-
 <!-- ============================================================
-     FLOATING CHAT WIDGET
+     BIS CHATBOT WIDGET
      ============================================================ -->
 
 <div class="cw-wrap" id="cwWrap">
 
-    <!-- Chat Toggle -->
+    <!-- ========================================================
+         CHAT TOGGLE
+         ======================================================== -->
+
     <button
         class="cw-toggle"
         id="cwToggle"
+        type="button"
         onclick="cwOpen()"
         aria-label="Open chat">
 
@@ -23,7 +19,13 @@
             <i class="fas fa-comment-dots"></i>
         </span>
 
-        <span class="cw-unread" id="cwUnread">1</span>
+        <span
+            class="cw-unread"
+            id="cwUnread"
+            style="display:none;">
+            1
+        </span>
+
     </button>
 
 
@@ -33,14 +35,20 @@
 
     <div class="cw-panel" id="cwPanel">
 
-        <!-- Header -->
+        <!-- ====================================================
+             HEADER
+             ==================================================== -->
+
         <div class="cw-header">
 
             <div class="cw-header-left">
 
                 <div class="cw-header-avatar">
+
                     <i class="fas fa-robot"></i>
+
                     <span class="cw-header-dot"></span>
+
                 </div>
 
                 <div class="cw-header-text">
@@ -60,7 +68,6 @@
 
             <div class="cw-header-actions">
 
-                <!-- New Conversation -->
                 <button
                     type="button"
                     class="cw-hbtn"
@@ -72,7 +79,6 @@
                 </button>
 
 
-                <!-- Recent Conversations -->
                 <button
                     type="button"
                     class="cw-hbtn"
@@ -84,7 +90,6 @@
                 </button>
 
 
-                <!-- Close -->
                 <button
                     type="button"
                     class="cw-hbtn"
@@ -101,7 +106,7 @@
 
 
         <!-- ====================================================
-             RECENT CONVERSATIONS
+             HISTORY
              ==================================================== -->
 
         <div
@@ -141,7 +146,7 @@
 
 
         <!-- ====================================================
-             DATE DIVIDER
+             DATE
              ==================================================== -->
 
         <div class="cw-date-divider">
@@ -154,18 +159,23 @@
 
 
         <!-- ====================================================
-             CHAT MESSAGES
+             MESSAGES
              ==================================================== -->
 
         <div
             class="cw-messages"
             id="cwMessages">
 
-            <!-- Initial AI Message -->
+            <!-- ==================================================
+                 INITIAL AI MESSAGE
+                 ================================================== -->
+
             <div class="cw-row cw-row--bot">
 
                 <div class="cw-avatar">
+
                     <i class="fas fa-robot"></i>
+
                 </div>
 
 
@@ -195,9 +205,9 @@
             </div>
 
 
-            <!-- =================================================
+            <!-- ==================================================
                  QUICK QUESTIONS
-                 ================================================= -->
+                 ================================================== -->
 
             <div
                 class="cw-chips"
@@ -209,6 +219,7 @@
                     onclick="cwQuick('How do I request a barangay clearance?')">
 
                     <i class="fas fa-file-alt"></i>
+
                     Request clearance
 
                 </button>
@@ -220,6 +231,7 @@
                     onclick="cwQuick('How do I create an account?')">
 
                     <i class="fas fa-user-plus"></i>
+
                     Create account
 
                 </button>
@@ -231,6 +243,7 @@
                     onclick="cwQuick('How do I file a blotter report?')">
 
                     <i class="fas fa-book"></i>
+
                     File blotter
 
                 </button>
@@ -242,6 +255,7 @@
                     onclick="cwQuick('What documents can I request?')">
 
                     <i class="fas fa-file-contract"></i>
+
                     Documents
 
                 </button>
@@ -253,6 +267,7 @@
                     onclick="cwQuick('What are the office hours?')">
 
                     <i class="fas fa-clock"></i>
+
                     Office hours
 
                 </button>
@@ -264,6 +279,7 @@
                     onclick="cwQuick('How do I reset my password?')">
 
                     <i class="fas fa-key"></i>
+
                     Reset password
 
                 </button>
@@ -274,7 +290,7 @@
 
 
         <!-- ====================================================
-             CHAT INPUT
+             FOOTER
              ==================================================== -->
 
         <div class="cw-footer">
@@ -288,10 +304,12 @@
                     placeholder="Type a message..."
                     autocomplete="off">
 
+
                 <button
                     type="button"
                     class="cw-send"
-                    onclick="cwSend()">
+                    onclick="cwSend()"
+                    aria-label="Send message">
 
                     <i class="fas fa-paper-plane"></i>
 
@@ -321,12 +339,506 @@
 <style>
 
 /* ============================================================
+   WIDGET
+   ============================================================ */
+
+.cw-wrap {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 99999;
+    font-family: inherit;
+}
+
+
+/* ============================================================
+   TOGGLE
+   ============================================================ */
+
+.cw-toggle {
+    position: relative;
+
+    width: 58px;
+    height: 58px;
+
+    border: none;
+    border-radius: 50%;
+
+    background: #5b6fd6;
+    color: #fff;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, .20);
+
+    transition:
+        transform .2s ease,
+        box-shadow .2s ease;
+}
+
+.cw-toggle:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, .25);
+}
+
+.cw-toggle:active {
+    transform: scale(.96);
+}
+
+.cw-toggle-icon {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 22px;
+}
+
+
+/* ============================================================
+   UNREAD
+   ============================================================ */
+
+.cw-unread {
+    position: absolute;
+
+    top: -3px;
+    right: -3px;
+
+    min-width: 19px;
+    height: 19px;
+
+    padding: 0 5px;
+
+    border-radius: 50px;
+
+    background: #e74c3c;
+    color: #fff;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 2px solid #fff;
+}
+
+
+/* ============================================================
+   PANEL
+   ============================================================ */
+
+.cw-panel {
+    position: absolute;
+
+    right: 0;
+    bottom: 72px;
+
+    width: 380px;
+
+    max-width: calc(100vw - 30px);
+
+    height: 570px;
+
+    max-height: calc(100vh - 110px);
+
+    background: #fff;
+
+    border-radius: 18px;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 18px 55px rgba(0, 0, 0, .22);
+
+    display: flex;
+    flex-direction: column;
+
+    opacity: 0;
+    visibility: hidden;
+
+    transform:
+        translateY(14px)
+        scale(.98);
+
+    pointer-events: none;
+
+    transition:
+        opacity .2s ease,
+        visibility .2s ease,
+        transform .2s ease;
+}
+
+.cw-panel.cw-open {
+
+    opacity: 1;
+
+    visibility: visible;
+
+    transform:
+        translateY(0)
+        scale(1);
+
+    pointer-events: auto;
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.cw-header {
+    min-height: 64px;
+
+    padding: 10px 12px;
+
+    background: #5b6fd6;
+
+    color: #fff;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    flex-shrink: 0;
+}
+
+.cw-header-left {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    min-width: 0;
+}
+
+.cw-header-avatar {
+    position: relative;
+
+    width: 40px;
+    height: 40px;
+
+    border-radius: 50%;
+
+    background:
+        rgba(255, 255, 255, .18);
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+}
+
+.cw-header-avatar i {
+    font-size: 18px;
+}
+
+.cw-header-dot {
+    position: absolute;
+
+    right: 0;
+    bottom: 1px;
+
+    width: 9px;
+    height: 9px;
+
+    border-radius: 50%;
+
+    background: #2ecc71;
+
+    border: 2px solid #5b6fd6;
+}
+
+.cw-header-text {
+    display: flex;
+
+    flex-direction: column;
+
+    min-width: 0;
+}
+
+.cw-header-name {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.cw-header-sub {
+    margin-top: 2px;
+
+    font-size: 10px;
+
+    opacity: .85;
+}
+
+.cw-header-actions {
+    display: flex;
+
+    align-items: center;
+
+    gap: 3px;
+}
+
+.cw-hbtn {
+    width: 32px;
+    height: 32px;
+
+    border: 0;
+    border-radius: 8px;
+
+    background: transparent;
+
+    color: #fff;
+
+    cursor: pointer;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+}
+
+.cw-hbtn:hover {
+    background:
+        rgba(255, 255, 255, .15);
+}
+
+
+/* ============================================================
+   DATE
+   ============================================================ */
+
+.cw-date-divider {
+    padding: 8px 12px;
+
+    text-align: center;
+
+    flex-shrink: 0;
+}
+
+.cw-date-divider span {
+    display: inline-block;
+
+    padding: 3px 9px;
+
+    border-radius: 20px;
+
+    background:
+        rgba(0, 0, 0, .05);
+
+    font-size: 10px;
+
+    color: #777;
+}
+
+
+/* ============================================================
+   MESSAGES
+   ============================================================ */
+
+.cw-messages {
+    flex: 1;
+
+    overflow-y: auto;
+
+    padding: 14px;
+
+    background: #f7f8fc;
+
+    scroll-behavior: auto;
+}
+
+
+/* ============================================================
+   IMPORTANT ALIGNMENT RULES
+   ============================================================ */
+
+/*
+ * AI = LEFT
+ * STAFF = LEFT
+ * SYSTEM = LEFT
+ */
+
+#cwMessages .cw-row--bot,
+#cwMessages .cw-row--staff,
+#cwMessages .cw-row--system {
+
+    display: flex !important;
+
+    width: 100% !important;
+
+    justify-content: flex-start !important;
+
+    align-items: flex-start !important;
+}
+
+
+/*
+ * RESIDENT = RIGHT
+ */
+
+#cwMessages .cw-row--user {
+
+    display: flex !important;
+
+    width: 100% !important;
+
+    justify-content: flex-end !important;
+
+    align-items: flex-start !important;
+}
+
+
+/*
+ * User body goes all the way to the right.
+ */
+
+#cwMessages .cw-row--user .cw-body {
+
+    margin-left: auto !important;
+
+    margin-right: 0 !important;
+
+    max-width: 78%;
+}
+
+
+/*
+ * User timestamp = RIGHT
+ */
+
+#cwMessages .cw-row--user .cw-ts {
+
+    text-align: right !important;
+}
+
+
+/* ============================================================
+   AVATAR
+   ============================================================ */
+
+.cw-avatar {
+
+    width: 30px;
+    height: 30px;
+
+    border-radius: 50%;
+
+    background: #5b6fd6;
+
+    color: #fff;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    margin-right: 8px;
+
+    font-size: 12px;
+}
+
+
+/* ============================================================
+   BODY
+   ============================================================ */
+
+.cw-body {
+    max-width: 82%;
+}
+
+
+/* ============================================================
+   BUBBLE
+   ============================================================ */
+
+.cw-bubble {
+
+    padding: 10px 12px;
+
+    border-radius: 14px;
+
+    background: #fff;
+
+    color: #333;
+
+    font-size: 13px;
+
+    box-shadow:
+        0 1px 4px rgba(0, 0, 0, .06);
+
+    word-wrap: break-word;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* ============================================================
+   USER BUBBLE
+   ============================================================ */
+
+#cwMessages .cw-row--user .cw-bubble {
+
+    background: #5b6fd6;
+
+    color: #fff;
+
+    border-bottom-right-radius: 4px;
+}
+
+
+/* ============================================================
+   AI BUBBLE
+   ============================================================ */
+
+#cwMessages .cw-row--bot .cw-bubble {
+
+    border-bottom-left-radius: 4px;
+}
+
+
+/* ============================================================
+   TIMESTAMP
+   ============================================================ */
+
+.cw-ts {
+
+    display: block;
+
+    margin-top: 4px;
+
+    font-size: 9px;
+
+    color: #999;
+}
+
+
+/* ============================================================
    AI RESPONSE
    ============================================================ */
 
 .cw-ai-response {
+
     width: 100%;
+
     max-width: 100%;
+
     box-sizing: border-box;
 
     text-align: justify !important;
@@ -340,15 +852,12 @@
     overflow-wrap: anywhere;
 }
 
-
-/* ============================================================
-   NORMAL PARAGRAPHS
-   ============================================================ */
-
 .cw-ai-response .cw-ai-paragraph {
+
     display: block;
 
-    margin: 0 0 10px 0;
+    margin:
+        0 0 10px 0;
 
     padding: 0;
 
@@ -357,17 +866,18 @@
     line-height: 1.65;
 }
 
-
 .cw-ai-response .cw-ai-paragraph:last-child {
+
     margin-bottom: 0;
 }
 
 
 /* ============================================================
-   NUMBERED STEPS
+   LISTS
    ============================================================ */
 
 .cw-ai-response .cw-ai-steps {
+
     display: block;
 
     margin-top: 10px;
@@ -379,8 +889,8 @@
     text-align: left !important;
 }
 
-
 .cw-ai-response .cw-ai-steps li {
+
     margin-bottom: 9px;
 
     padding-left: 5px;
@@ -390,17 +900,14 @@
     text-align: justify !important;
 }
 
-
 .cw-ai-response .cw-ai-steps li:last-child {
+
     margin-bottom: 0;
 }
 
 
-/* ============================================================
-   BULLET POINTS
-   ============================================================ */
-
 .cw-ai-response .cw-ai-bullets {
+
     display: block;
 
     margin-top: 8px;
@@ -412,8 +919,8 @@
     text-align: left !important;
 }
 
-
 .cw-ai-response .cw-ai-bullets li {
+
     margin-bottom: 8px;
 
     padding-left: 5px;
@@ -424,78 +931,43 @@
 }
 
 
-.cw-ai-response .cw-ai-bullets li:last-child {
-    margin-bottom: 0;
-}
-
-
 /* ============================================================
-   EMPTY SPACE
+   QUICK CHIPS
    ============================================================ */
 
-.cw-ai-response .cw-space {
-    display: block;
+.cw-chips {
 
-    height: 7px;
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 7px;
+
+    margin-top: 10px;
 }
 
+.cw-chip {
 
-/* ============================================================
-   BOLD
-   ============================================================ */
+    border:
+        1px solid rgba(91, 111, 214, .25);
 
-.cw-ai-response strong {
-    font-weight: 700;
+    background: #fff;
+
+    color: #4f60bd;
+
+    border-radius: 20px;
+
+    padding: 7px 10px;
+
+    font-size: 10px;
+
+    cursor: pointer;
 }
 
+.cw-chip:hover {
 
-/* ============================================================
-   ITALIC
-   ============================================================ */
-
-.cw-ai-response em {
-    font-style: italic;
-}
-
-
-/* ============================================================
-   INLINE CODE
-   ============================================================ */
-
-.cw-ai-response code {
-    background: rgba(0, 0, 0, .06);
-
-    color: inherit;
-
-    padding: 2px 5px;
-
-    border-radius: 4px;
-
-    font-size: .9em;
-
-    font-family: monospace;
-}
-
-
-/* ============================================================
-   LINKS
-   ============================================================ */
-
-.cw-ai-response a {
-    text-decoration: underline;
-}
-
-
-/* ============================================================
-   CHAT BUBBLE
-   ============================================================ */
-
-.cw-bubble.cw-ai-response {
-    max-width: 100%;
-
-    box-sizing: border-box;
-
-    overflow-wrap: anywhere;
+    background:
+        rgba(91, 111, 214, .08);
 }
 
 
@@ -504,38 +976,97 @@
    ============================================================ */
 
 .cw-typing-row {
+
     margin-bottom: 5px;
+}
+
+.cw-typing {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 4px;
+}
+
+.cw-typing span {
+
+    width: 6px;
+    height: 6px;
+
+    border-radius: 50%;
+
+    background: #999;
+
+    animation:
+        cwTyping 1.2s
+        infinite
+        ease-in-out;
+}
+
+.cw-typing span:nth-child(2) {
+
+    animation-delay: .15s;
+}
+
+.cw-typing span:nth-child(3) {
+
+    animation-delay: .30s;
+}
+
+@keyframes cwTyping {
+
+    0%,
+    60%,
+    100% {
+
+        transform: translateY(0);
+
+        opacity: .45;
+
+    }
+
+    30% {
+
+        transform: translateY(-4px);
+
+        opacity: 1;
+
+    }
+
 }
 
 
 /* ============================================================
-   PERSISTENT CHAT HISTORY
+   HISTORY
    ============================================================ */
 
 .cw-history-panel {
+
     position: absolute;
 
     top: 64px;
 
     left: 0;
-
     right: 0;
 
     z-index: 20;
 
     background: #fff;
 
-    border-bottom: 1px solid rgba(0, 0, 0, .08);
+    border-bottom:
+        1px solid rgba(0, 0, 0, .08);
 
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .10);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, .10);
 
     max-height: 330px;
 
     overflow: hidden;
 }
 
-
 .cw-history-title {
+
     display: flex;
 
     align-items: center;
@@ -548,11 +1079,12 @@
 
     font-weight: 600;
 
-    border-bottom: 1px solid rgba(0, 0, 0, .06);
+    border-bottom:
+        1px solid rgba(0, 0, 0, .06);
 }
 
-
 .cw-history-close {
+
     border: 0;
 
     background: transparent;
@@ -564,8 +1096,8 @@
     line-height: 1;
 }
 
-
 .cw-history-list {
+
     max-height: 275px;
 
     overflow-y: auto;
@@ -573,8 +1105,8 @@
     padding: 6px;
 }
 
-
 .cw-history-item {
+
     width: 100%;
 
     border: 0;
@@ -590,25 +1122,17 @@
     cursor: pointer;
 
     margin-bottom: 2px;
-
-    transition:
-        background .15s ease,
-        transform .10s ease;
 }
-
 
 .cw-history-item:hover,
 .cw-history-item.active {
-    background: rgba(91, 111, 214, .08);
+
+    background:
+        rgba(91, 111, 214, .08);
 }
-
-
-.cw-history-item:active {
-    transform: scale(.99);
-}
-
 
 .cw-history-item-title {
+
     display: block;
 
     font-size: 12px;
@@ -622,8 +1146,8 @@
     text-overflow: ellipsis;
 }
 
-
 .cw-history-item-date {
+
     display: block;
 
     margin-top: 3px;
@@ -633,8 +1157,9 @@
     opacity: .60;
 }
 
+.cw-history-empty,
+.cw-history-loading {
 
-.cw-history-empty {
     padding: 18px 10px;
 
     text-align: center;
@@ -646,17 +1171,125 @@
 
 
 /* ============================================================
-   HISTORY LOADING
+   FOOTER
    ============================================================ */
 
-.cw-history-loading {
-    padding: 18px 10px;
+.cw-footer {
+
+    padding:
+        10px 12px 8px;
+
+    background: #fff;
+
+    border-top:
+        1px solid rgba(0, 0, 0, .06);
+
+    flex-shrink: 0;
+}
+
+.cw-input-wrap {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+}
+
+.cw-input {
+
+    flex: 1;
+
+    min-width: 0;
+
+    height: 40px;
+
+    padding: 0 12px;
+
+    border:
+        1px solid #ddd;
+
+    border-radius: 20px;
+
+    outline: none;
+
+    font-size: 13px;
+
+    box-sizing: border-box;
+}
+
+.cw-input:focus {
+
+    border-color: #5b6fd6;
+}
+
+.cw-send {
+
+    width: 40px;
+    height: 40px;
+
+    border: 0;
+
+    border-radius: 50%;
+
+    background: #5b6fd6;
+
+    color: #fff;
+
+    cursor: pointer;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+}
+
+.cw-powered {
+
+    margin:
+        6px 0 0;
 
     text-align: center;
 
-    font-size: 12px;
+    font-size: 9px;
 
-    opacity: .65;
+    color: #aaa;
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 520px) {
+
+    .cw-wrap {
+
+        right: 15px;
+
+        bottom: 15px;
+    }
+
+    .cw-panel {
+
+        right: -5px;
+
+        width:
+            calc(100vw - 30px);
+
+        height:
+            min(570px, calc(100vh - 90px));
+    }
+
+    .cw-toggle {
+
+        width: 54px;
+
+        height: 54px;
+    }
+
 }
 
 </style>
@@ -674,11 +1307,45 @@
 
 
     /* ========================================================
-       CONFIGURATION
+       USER ROLE
        ======================================================== */
 
-    const CHAT_ENDPOINT =
-        '/api/chatbot/chat';
+    const USER_ROLE =
+        <?= json_encode(
+            (string)(session()->get('role') ?? 'resident')
+        ) ?>;
+
+
+    /* ========================================================
+       CHAT ENDPOINT
+       ======================================================== */
+
+    const CHAT_ENDPOINT = (() => {
+
+        switch (
+            String(USER_ROLE).toLowerCase()
+        ) {
+
+            case 'resident':
+                return '/resident/chatbot/api/chat';
+
+            case 'secretary':
+                return '/secretary/chatbot/api/chat';
+
+            case 'captain':
+                return '/captain/chatbot/api/chat';
+
+            default:
+                return '/api/chatbot/chat';
+
+        }
+
+    })();
+
+
+    /* ========================================================
+       ENDPOINTS
+       ======================================================== */
 
     const CHAT_HISTORY_ENDPOINT =
         '/api/chatbot/history';
@@ -686,25 +1353,32 @@
     const CHAT_CONVERSATION_ENDPOINT =
         '/api/chatbot/conversation';
 
+    const SUPPORT_REQUEST_ENDPOINT =
+        '/resident/chatbot/api/request-human';
+
+    const SUPPORT_STATUS_ENDPOINT =
+        '/resident/chatbot/api/support-status';
+
 
     /* ========================================================
-       CURRENT CONVERSATION
+       STATE
        ======================================================== */
 
     let conversationId = null;
 
+    let supportMode = 'ai';
 
-    /* ========================================================
-       REQUEST FLAGS
-       ======================================================== */
+    let assignedStaffId = null;
 
     let historyLoading = false;
 
     let chatSending = false;
 
+    let supportPollingStarted = false;
+
 
     /* ========================================================
-       CURRENT TIME
+       TIME
        ======================================================== */
 
     function now() {
@@ -727,7 +1401,7 @@
 
 
     /* ========================================================
-       HTML ESCAPE
+       ESCAPE HTML
        ======================================================== */
 
     function escapeHtml(value) {
@@ -743,17 +1417,14 @@
 
 
     /* ========================================================
-       FORMAT INLINE CONTENT
+       INLINE FORMAT
        ======================================================== */
 
     function formatInline(text) {
 
-        let value = String(text ?? '');
+        let value =
+            String(text ?? '');
 
-
-        /*
-         * Convert HTML line breaks.
-         */
 
         value = value.replace(
             /<br\s*\/?>/gi,
@@ -761,14 +1432,11 @@
         );
 
 
-        /*
-         * Convert HTML bold to Markdown.
-         */
-
         value = value.replace(
             /<strong>(.*?)<\/strong>/gi,
             '**$1**'
         );
+
 
         value = value.replace(
             /<b>(.*?)<\/b>/gi,
@@ -776,14 +1444,11 @@
         );
 
 
-        /*
-         * Convert HTML italic to Markdown.
-         */
-
         value = value.replace(
             /<em>(.*?)<\/em>/gi,
             '*$1*'
         );
+
 
         value = value.replace(
             /<i>(.*?)<\/i>/gi,
@@ -791,50 +1456,21 @@
         );
 
 
-        /*
-         * Remove any remaining HTML.
-         *
-         * This protects the chatbot from
-         * arbitrary HTML returned by AI.
-         */
-
         value = value.replace(
             /<[^>]*>/g,
             ''
         );
 
 
-        /*
-         * Escape HTML.
-         */
-
         let result =
             escapeHtml(value);
 
-
-        /*
-         * Bold.
-         */
 
         result = result.replace(
             /\*\*(.*?)\*\*/g,
             '<strong>$1</strong>'
         );
 
-
-        /*
-         * Italic.
-         */
-
-        result = result.replace(
-            /(^|[^*])\*([^*]+)\*(?!\*)/g,
-            '$1<em>$2</em>'
-        );
-
-
-        /*
-         * Inline code.
-         */
 
         result = result.replace(
             /`([^`]+)`/g,
@@ -857,16 +1493,15 @@
             text === null ||
             text === undefined
         ) {
+
             return '';
+
         }
 
 
-        text = String(text);
+        text =
+            String(text);
 
-
-        /*
-         * Normalize escaped newlines.
-         */
 
         text = text
             .replace(/\\r\\n/g, '\n')
@@ -875,56 +1510,9 @@
             .replace(/\r/g, '\n');
 
 
-        /*
-         * Convert HTML <br> to newline.
-         */
-
         text = text.replace(
             /<br\s*\/?>/gi,
             '\n'
-        );
-
-
-        /*
-         * Force newline before numbered
-         * steps when AI returns them inline.
-         *
-         * Example:
-         *
-         * Please do the following: 1. Register
-         * 2. Login
-         *
-         * becomes:
-         *
-         * Please do the following:
-         * 1. Register
-         * 2. Login
-         */
-
-        text = text.replace(
-            /(\s)(\d{1,2})\.\s+/g,
-            '\n$2. '
-        );
-
-
-        /*
-         * Number immediately after colon.
-         */
-
-        text = text.replace(
-            /:\s*(\d{1,2})\.\s+/g,
-            ':\n$1. '
-        );
-
-
-        /*
-         * Normalize spaces while preserving
-         * line breaks.
-         */
-
-        text = text.replace(
-            /[ \t]+/g,
-            ' '
         );
 
 
@@ -939,10 +1527,6 @@
         let inBulletList = false;
 
 
-        /* ====================================================
-           CLOSE NUMBERED LIST
-           ==================================================== */
-
         function closeNumberedList() {
 
             if (inNumberedList) {
@@ -955,10 +1539,6 @@
 
         }
 
-
-        /* ====================================================
-           CLOSE BULLET LIST
-           ==================================================== */
 
         function closeBulletList() {
 
@@ -973,20 +1553,12 @@
         }
 
 
-        /* ====================================================
-           PROCESS LINES
-           ==================================================== */
-
         lines.forEach(
             function (rawLine) {
 
                 const line =
                     rawLine.trim();
 
-
-                /*
-                 * Empty line.
-                 */
 
                 if (!line) {
 
@@ -1002,23 +1574,13 @@
                 }
 
 
-                /*
-                 * Numbered list.
-                 *
-                 * Supports:
-                 *
-                 * 1. Text
-                 * 2. Text
-                 * 3. Text
-                 */
-
-                const numberedMatch =
+                const numbered =
                     line.match(
                         /^(\d{1,2})[.)]\s+(.*)$/
                     );
 
 
-                if (numberedMatch) {
+                if (numbered) {
 
                     closeBulletList();
 
@@ -1028,7 +1590,8 @@
                         html +=
                             '<ol class="cw-ai-steps">';
 
-                        inNumberedList = true;
+                        inNumberedList =
+                            true;
 
                     }
 
@@ -1036,7 +1599,7 @@
                     html +=
                         '<li>' +
                         formatInline(
-                            numberedMatch[2]
+                            numbered[2]
                         ) +
                         '</li>';
 
@@ -1045,23 +1608,13 @@
                 }
 
 
-                /*
-                 * Bullet list.
-                 *
-                 * Supports:
-                 *
-                 * - Text
-                 * • Text
-                 * * Text
-                 */
-
-                const bulletMatch =
+                const bullet =
                     line.match(
                         /^[-•*]\s+(.*)$/
                     );
 
 
-                if (bulletMatch) {
+                if (bullet) {
 
                     closeNumberedList();
 
@@ -1071,7 +1624,8 @@
                         html +=
                             '<ul class="cw-ai-bullets">';
 
-                        inBulletList = true;
+                        inBulletList =
+                            true;
 
                     }
 
@@ -1079,7 +1633,7 @@
                     html +=
                         '<li>' +
                         formatInline(
-                            bulletMatch[1]
+                            bullet[1]
                         ) +
                         '</li>';
 
@@ -1087,10 +1641,6 @@
 
                 }
 
-
-                /*
-                 * Normal paragraph.
-                 */
 
                 closeNumberedList();
 
@@ -1117,10 +1667,40 @@
 
 
     /* ========================================================
+       CHECK BOTTOM
+       ======================================================== */
+
+    function isNearBottom(
+        wrap,
+        threshold = 100
+    ) {
+
+        if (!wrap) {
+
+            return true;
+
+        }
+
+
+        return (
+            wrap.scrollHeight -
+            wrap.scrollTop -
+            wrap.clientHeight
+        ) <= threshold;
+
+    }
+
+
+    /* ========================================================
        ADD MESSAGE
        ======================================================== */
 
-    function addMsg(text, isUser) {
+    function addMsg(
+        text,
+        isUser = false,
+        senderType = null,
+        autoScroll = true
+    ) {
 
         const wrap =
             document.getElementById(
@@ -1129,14 +1709,11 @@
 
 
         if (!wrap) {
+
             return;
+
         }
 
-
-        /*
-         * Remove quick questions after
-         * the first actual message.
-         */
 
         const chips =
             document.getElementById(
@@ -1145,92 +1722,299 @@
 
 
         if (chips) {
+
             chips.remove();
+
         }
 
 
+        /*
+         * Normalize sender type.
+         */
+
+        let type =
+            String(
+                senderType || ''
+            ).toLowerCase();
+
+
+        /*
+         * VERY IMPORTANT:
+         *
+         * If isUser is true, ALWAYS classify
+         * as USER regardless of senderType.
+         */
+
+        if (isUser === true) {
+
+            type = 'user';
+
+        }
+
+
+        /*
+         * If no sender was supplied:
+         *
+         * false = bot
+         */
+
+        if (!type) {
+
+            type = 'bot';
+
+        }
+
+
+        /*
+         * Remember scroll state BEFORE
+         * adding the message.
+         */
+
+        const shouldScroll =
+            autoScroll &&
+            isNearBottom(wrap);
+
+
         const row =
-            document.createElement('div');
-
-
-        row.className =
-            'cw-row ' +
-            (
-                isUser
-                    ? 'cw-row--user'
-                    : 'cw-row--bot'
+            document.createElement(
+                'div'
             );
 
 
-        /* ====================================================
-           USER MESSAGE
-           ==================================================== */
+        /* =====================================================
+           EXPLICIT ROW CLASS
+           ===================================================== */
 
-        if (isUser) {
+        if (type === 'user') {
+
+            /*
+             * RESIDENT = RIGHT
+             */
+
+            row.className =
+                'cw-row cw-row--user';
+
+        }
+
+        else if (type === 'staff') {
+
+            /*
+             * STAFF = LEFT
+             */
+
+            row.className =
+                'cw-row cw-row--bot cw-row--staff';
+
+        }
+
+        else if (type === 'system') {
+
+            /*
+             * SYSTEM = LEFT
+             */
+
+            row.className =
+                'cw-row cw-row--bot cw-row--system';
+
+        }
+
+        else {
+
+            /*
+             * AI = LEFT
+             */
+
+            row.className =
+                'cw-row cw-row--bot';
+
+        }
+
+
+        /* =====================================================
+           USER MESSAGE
+           ===================================================== */
+
+        if (type === 'user') {
 
             row.innerHTML = `
+
                 <div class="cw-body">
 
                     <div class="cw-bubble">
+
                         ${escapeHtml(text)}
+
                     </div>
 
                     <span class="cw-ts">
+
                         ${now()}
+
                     </span>
 
                 </div>
+
             `;
 
         }
 
 
-        /* ====================================================
+        /* =====================================================
+           STAFF MESSAGE
+           ===================================================== */
+
+        else if (type === 'staff') {
+
+            row.innerHTML = `
+
+                <div class="cw-avatar">
+
+                    <i class="fas fa-user-tie"></i>
+
+                </div>
+
+
+                <div class="cw-body">
+
+                    <div
+                        class="cw-bubble cw-ai-response"
+                        style="
+                            background:#e8f7f1;
+                            color:#184b3a;
+                        ">
+
+                        <div
+                            style="
+                                font-size:10px;
+                                font-weight:700;
+                                color:#168b69;
+                                margin-bottom:4px;
+                            ">
+
+                            Barangay Staff
+
+                        </div>
+
+                        ${formatAIResponse(text)}
+
+                    </div>
+
+
+                    <span class="cw-ts">
+
+                        ${now()}
+
+                    </span>
+
+                </div>
+
+            `;
+
+        }
+
+
+        /* =====================================================
+           SYSTEM MESSAGE
+           ===================================================== */
+
+        else if (type === 'system') {
+
+            row.innerHTML = `
+
+                <div class="cw-avatar">
+
+                    <i class="fas fa-info-circle"></i>
+
+                </div>
+
+
+                <div class="cw-body">
+
+                    <div
+                        class="cw-bubble cw-ai-response"
+                        style="
+                            background:#fff8e5;
+                            color:#685000;
+                        ">
+
+                        ${formatAIResponse(text)}
+
+                    </div>
+
+
+                    <span class="cw-ts">
+
+                        ${now()}
+
+                    </span>
+
+                </div>
+
+            `;
+
+        }
+
+
+        /* =====================================================
            AI MESSAGE
-           ==================================================== */
+           ===================================================== */
 
         else {
 
-            const formatted =
-                formatAIResponse(text);
-
-
             row.innerHTML = `
+
                 <div class="cw-avatar">
+
                     <i class="fas fa-robot"></i>
+
                 </div>
+
 
                 <div class="cw-body">
 
                     <div class="cw-bubble cw-ai-response">
-                        ${formatted}
+
+                        ${formatAIResponse(text)}
+
                     </div>
 
+
                     <span class="cw-ts">
+
                         ${now()}
+
                     </span>
 
                 </div>
+
             `;
 
         }
 
+
+        /*
+         * Add message.
+         */
 
         wrap.appendChild(row);
 
 
         /*
-         * Scroll to bottom.
+         * Only scroll if appropriate.
          */
 
-        wrap.scrollTop =
-            wrap.scrollHeight;
+        if (shouldScroll) {
+
+            wrap.scrollTop =
+                wrap.scrollHeight;
+
+        }
 
     }
 
 
     /* ========================================================
-       TYPING INDICATOR
+       TYPING
        ======================================================== */
 
     function typing() {
@@ -1242,57 +2026,78 @@
 
 
         if (!wrap) {
+
             return;
+
         }
 
 
-        const existing =
+        const old =
             document.getElementById(
                 'cwTyping'
             );
 
 
-        if (existing) {
-            existing.remove();
+        if (old) {
+
+            old.remove();
+
         }
 
 
+        const shouldScroll =
+            isNearBottom(wrap);
+
+
         const t =
-            document.createElement('div');
-
-
-        t.className =
-            'cw-row cw-row--bot cw-typing-row';
+            document.createElement(
+                'div'
+            );
 
 
         t.id =
             'cwTyping';
 
 
+        t.className =
+            'cw-row cw-row--bot cw-typing-row';
+
+
         t.innerHTML = `
+
             <div class="cw-avatar">
+
                 <i class="fas fa-robot"></i>
+
             </div>
+
 
             <div class="cw-body">
 
                 <div class="cw-bubble cw-typing">
 
                     <span></span>
+
                     <span></span>
+
                     <span></span>
 
                 </div>
 
             </div>
+
         `;
 
 
         wrap.appendChild(t);
 
 
-        wrap.scrollTop =
-            wrap.scrollHeight;
+        if (shouldScroll) {
+
+            wrap.scrollTop =
+                wrap.scrollHeight;
+
+        }
 
     }
 
@@ -1303,21 +2108,60 @@
 
     function removeTyping() {
 
-        const t =
+        const typingElement =
             document.getElementById(
                 'cwTyping'
             );
 
 
-        if (t) {
-            t.remove();
+        if (typingElement) {
+
+            typingElement.remove();
+
         }
 
     }
 
 
     /* ========================================================
-       FETCH CHAT HISTORY
+       SERVER ERROR
+       ======================================================== */
+
+    function showServerError(
+        data,
+        httpStatus
+    ) {
+
+        console.error(
+            'BIS Chatbot Error:',
+            {
+                status:
+                    httpStatus,
+
+                response:
+                    data
+            }
+        );
+
+
+        const message =
+            data?.response ||
+            data?.message ||
+            data?.error ||
+            'Sorry, I could not process your request. Please try again.';
+
+
+        addMsg(
+            message,
+            false,
+            'system'
+        );
+
+    }
+
+
+    /* ========================================================
+       FETCH HISTORY
        ======================================================== */
 
     async function fetchChatHistory() {
@@ -1334,14 +2178,17 @@
                         'same-origin',
 
                     headers: {
+
                         'Accept':
                             'application/json',
 
                         'X-Requested-With':
                             'XMLHttpRequest'
+
                     },
 
-                    cache: 'no-store'
+                    cache:
+                        'no-store'
                 }
             );
 
@@ -1349,44 +2196,14 @@
         if (!response.ok) {
 
             throw new Error(
-                'History request failed: HTTP ' +
+                'History HTTP ' +
                 response.status
             );
 
         }
 
 
-        const contentType =
-            response.headers.get(
-                'content-type'
-            ) || '';
-
-
-        if (
-            !contentType
-                .toLowerCase()
-                .includes('application/json')
-        ) {
-
-            throw new Error(
-                'History endpoint did not return JSON. Content-Type: ' +
-                contentType
-            );
-
-        }
-
-
-        const data =
-            await response.json();
-
-
-        console.log(
-            'BIS Chat History:',
-            data
-        );
-
-
-        return data;
+        return await response.json();
 
     }
 
@@ -1400,11 +2217,14 @@
     ) {
 
         if (historyLoading) {
+
             return null;
+
         }
 
 
-        historyLoading = true;
+        historyLoading =
+            true;
 
 
         try {
@@ -1417,11 +2237,6 @@
                 !data ||
                 data.success !== true
             ) {
-
-                console.warn(
-                    'BIS chat history unavailable:',
-                    data
-                );
 
                 return null;
 
@@ -1441,17 +2256,9 @@
             );
 
 
-            /*
-             * Restore active conversation
-             * during initial loading.
-             */
-
             if (
                 loadActiveConversation &&
-                data.active_conversation_id !==
-                    undefined &&
-                data.active_conversation_id !==
-                    null &&
+                data.active_conversation_id &&
                 Number(
                     data.active_conversation_id
                 ) > 0
@@ -1476,9 +2283,7 @@
                 }
 
 
-                renderConversationList(
-                    document.__cwConversations
-                );
+                await refreshSupportStatus();
 
             }
 
@@ -1486,19 +2291,22 @@
             return data;
 
         }
+
         catch (error) {
 
             console.error(
-                'Could not load BIS chat history:',
+                'Chat history error:',
                 error
             );
 
             return null;
 
         }
+
         finally {
 
-            historyLoading = false;
+            historyLoading =
+                false;
 
         }
 
@@ -1506,7 +2314,7 @@
 
 
     /* ========================================================
-       REFRESH CONVERSATION LIST ONLY
+       REFRESH CONVERSATION LIST
        ======================================================== */
 
     async function refreshConversationList() {
@@ -1521,11 +2329,6 @@
                 !data ||
                 data.success !== true
             ) {
-
-                console.warn(
-                    'Could not refresh conversation list:',
-                    data
-                );
 
                 return;
 
@@ -1545,10 +2348,11 @@
             );
 
         }
+
         catch (error) {
 
             console.error(
-                'Could not refresh BIS conversation list:',
+                'Conversation list error:',
                 error
             );
 
@@ -1565,12 +2369,6 @@
         conversations
     ) {
 
-        document.__cwConversations =
-            Array.isArray(conversations)
-                ? conversations
-                : [];
-
-
         const list =
             document.getElementById(
                 'cwHistoryList'
@@ -1578,21 +2376,29 @@
 
 
         if (!list) {
+
             return;
+
         }
 
 
-        list.innerHTML = '';
+        list.innerHTML =
+            '';
 
 
         if (
-            document.__cwConversations.length === 0
+            !Array.isArray(conversations) ||
+            conversations.length === 0
         ) {
 
             list.innerHTML = `
+
                 <div class="cw-history-empty">
+
                     No saved conversations yet.
+
                 </div>
+
             `;
 
             return;
@@ -1600,7 +2406,7 @@
         }
 
 
-        document.__cwConversations.forEach(
+        conversations.forEach(
             function (conversation) {
 
                 const button =
@@ -1619,8 +2425,12 @@
 
                 if (
                     conversationId !== null &&
-                    Number(conversation.id) ===
-                    Number(conversationId)
+                    Number(
+                        conversation.id
+                    ) ===
+                    Number(
+                        conversationId
+                    )
                 ) {
 
                     button.classList.add(
@@ -1630,47 +2440,33 @@
                 }
 
 
-                const title =
-                    document.createElement(
-                        'span'
-                    );
+                button.innerHTML = `
+
+                    <span
+                        class="cw-history-item-title">
+
+                        ${escapeHtml(
+                            conversation.title ||
+                            'Conversation'
+                        )}
+
+                    </span>
 
 
-                title.className =
-                    'cw-history-item-title';
+                    <span
+                        class="cw-history-item-date">
 
+                        ${escapeHtml(
+                            formatConversationDate(
+                                conversation.updated_at ||
+                                conversation.created_at ||
+                                ''
+                            )
+                        )}
 
-                title.textContent =
-                    conversation.title ||
-                    'Conversation';
+                    </span>
 
-
-                const date =
-                    document.createElement(
-                        'span'
-                    );
-
-
-                date.className =
-                    'cw-history-item-date';
-
-
-                date.textContent =
-                    formatConversationDate(
-                        conversation.updated_at ||
-                        conversation.created_at ||
-                        ''
-                    );
-
-
-                button.appendChild(
-                    title
-                );
-
-
-                button.appendChild(
-                    date
-                );
+                `;
 
 
                 button.addEventListener(
@@ -1698,7 +2494,7 @@
 
 
     /* ========================================================
-       FORMAT CONVERSATION DATE
+       DATE FORMAT
        ======================================================== */
 
     function formatConversationDate(
@@ -1706,20 +2502,19 @@
     ) {
 
         if (!value) {
+
             return '';
+
         }
-
-
-        const normalized =
-            String(value).replace(
-                ' ',
-                'T'
-            );
 
 
         const date =
             new Date(
-                normalized
+                String(value)
+                    .replace(
+                        ' ',
+                        'T'
+                    )
             );
 
 
@@ -1730,30 +2525,6 @@
         ) {
 
             return String(value);
-
-        }
-
-
-        const today =
-            new Date();
-
-
-        if (
-            date.toDateString() ===
-            today.toDateString()
-        ) {
-
-            return (
-                date.getHours()
-                    .toString()
-                    .padStart(2, '0')
-                +
-                ':'
-                +
-                date.getMinutes()
-                    .toString()
-                    .padStart(2, '0')
-            );
 
         }
 
@@ -1771,13 +2542,17 @@
 
 
     /* ========================================================
-       LOAD ONE CONVERSATION
+       LOAD CONVERSATION
        ======================================================== */
 
-    async function loadConversation(id) {
+    async function loadConversation(
+        id
+    ) {
 
         if (!id) {
+
             return;
+
         }
 
 
@@ -1797,64 +2572,32 @@
                             'same-origin',
 
                         headers: {
+
                             'Accept':
                                 'application/json',
 
                             'X-Requested-With':
                                 'XMLHttpRequest'
+
                         },
 
-                        cache: 'no-store'
+                        cache:
+                            'no-store'
                     }
                 );
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    'Conversation request failed: HTTP ' +
-                    response.status
-                );
-
-            }
-
-
-            const contentType =
-                response.headers.get(
-                    'content-type'
-                ) || '';
-
-
-            if (
-                !contentType
-                    .toLowerCase()
-                    .includes('application/json')
-            ) {
-
-                throw new Error(
-                    'Conversation endpoint did not return JSON.'
-                );
-
-            }
 
 
             const data =
                 await response.json();
 
 
-            console.log(
-                'Selected BIS Conversation:',
-                data
-            );
-
-
             if (
-                !data ||
+                !response.ok ||
                 data.success !== true
             ) {
 
                 console.error(
-                    'Conversation could not be loaded:',
+                    'Conversation loading failed:',
                     data
                 );
 
@@ -1876,14 +2619,20 @@
             );
 
 
-            const panel =
+            await refreshSupportStatus();
+
+
+            const historyPanel =
                 document.getElementById(
                     'cwHistoryPanel'
                 );
 
 
-            if (panel) {
-                panel.hidden = true;
+            if (historyPanel) {
+
+                historyPanel.hidden =
+                    true;
+
             }
 
 
@@ -1892,22 +2641,12 @@
                 []
             );
 
-
-            const input =
-                document.getElementById(
-                    'cwInput'
-                );
-
-
-            if (input) {
-                input.focus();
-            }
-
         }
+
         catch (error) {
 
             console.error(
-                'Could not load BIS conversation:',
+                'Load conversation error:',
                 error
             );
 
@@ -1931,12 +2670,35 @@
 
 
         if (!wrap) {
+
             return;
+
         }
 
 
-        wrap.innerHTML = '';
+        /*
+         * SAVE CURRENT SCROLL POSITION.
+         */
 
+        const previousScrollTop =
+            wrap.scrollTop;
+
+
+        const wasNearBottom =
+            isNearBottom(wrap);
+
+
+        /*
+         * CLEAR DISPLAY.
+         */
+
+        wrap.innerHTML =
+            '';
+
+
+        /*
+         * EMPTY CONVERSATION.
+         */
 
         if (
             !Array.isArray(messages) ||
@@ -1945,34 +2707,525 @@
 
             addMsg(
                 "Hello! I'm the BIS Assistant 👋\n\nHow can I help you today?",
+                false,
+                'bot',
                 false
             );
+
+
+            wrap.scrollTop =
+                wrap.scrollHeight;
+
 
             return;
 
         }
 
 
+        /* =====================================================
+           RENDER EACH STORED MESSAGE
+           ===================================================== */
+
         messages.forEach(
             function (item) {
 
-                addMsg(
-                    item.message || '',
-                    item.sender === 'user'
-                );
+                /*
+                 * Support different field names in case
+                 * your controller returns sender_type,
+                 * sender, role, etc.
+                 */
+
+                const sender =
+                    String(
+                        item.sender ||
+                        item.sender_type ||
+                        item.role ||
+                        ''
+                    ).toLowerCase();
+
+
+                const message =
+                    item.message ||
+                    item.content ||
+                    item.text ||
+                    '';
+
+
+                /* ---------------------------------------------
+                   RESIDENT
+                   --------------------------------------------- */
+
+                if (
+                    sender === 'user' ||
+                    sender === 'resident' ||
+                    sender === 'client'
+                ) {
+
+                    addMsg(
+                        message,
+                        true,
+                        'user',
+                        false
+                    );
+
+                }
+
+
+                /* ---------------------------------------------
+                   STAFF
+                   --------------------------------------------- */
+
+                else if (
+                    sender === 'staff' ||
+                    sender === 'secretary' ||
+                    sender === 'captain'
+                ) {
+
+                    addMsg(
+                        message,
+                        false,
+                        'staff',
+                        false
+                    );
+
+                }
+
+
+                /* ---------------------------------------------
+                   SYSTEM
+                   --------------------------------------------- */
+
+                else if (
+                    sender === 'system'
+                ) {
+
+                    addMsg(
+                        message,
+                        false,
+                        'system',
+                        false
+                    );
+
+                }
+
+
+                /* ---------------------------------------------
+                   AI
+                   --------------------------------------------- */
+
+                else {
+
+                    addMsg(
+                        message,
+                        false,
+                        'bot',
+                        false
+                    );
+
+                }
 
             }
         );
 
 
-        wrap.scrollTop =
-            wrap.scrollHeight;
+        /*
+         * IMPORTANT:
+         *
+         * If resident was reading old messages,
+         * restore their position.
+         */
+
+        if (wasNearBottom) {
+
+            wrap.scrollTop =
+                wrap.scrollHeight;
+
+        }
+
+        else {
+
+            const maxScrollTop =
+                Math.max(
+                    0,
+                    wrap.scrollHeight -
+                    wrap.clientHeight
+                );
+
+
+            wrap.scrollTop =
+                Math.min(
+                    previousScrollTop,
+                    maxScrollTop
+                );
+
+        }
 
     }
 
 
     /* ========================================================
-       TOGGLE HISTORY
+       SUPPORT STATUS
+       ======================================================== */
+
+    async function refreshSupportStatus() {
+
+        if (
+            String(USER_ROLE).toLowerCase() !==
+            'resident'
+        ) {
+
+            return null;
+
+        }
+
+
+        if (
+            !conversationId ||
+            Number(conversationId) <= 0
+        ) {
+
+            return null;
+
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    SUPPORT_STATUS_ENDPOINT +
+                    '?conversation_id=' +
+                    encodeURIComponent(
+                        conversationId
+                    ) +
+                    '&_=' +
+                    Date.now(),
+                    {
+                        method: 'GET',
+
+                        credentials:
+                            'same-origin',
+
+                        headers: {
+
+                            'Accept':
+                                'application/json',
+
+                            'X-Requested-With':
+                                'XMLHttpRequest'
+
+                        },
+
+                        cache:
+                            'no-store'
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                return null;
+
+            }
+
+
+            const data =
+                await response.json();
+
+
+            if (!data) {
+
+                return null;
+
+            }
+
+
+            if (data.support_mode) {
+
+                supportMode =
+                    data.support_mode;
+
+            }
+
+
+            assignedStaffId =
+                data.assigned_staff_id ||
+                null;
+
+
+            /*
+             * IMPORTANT:
+             *
+             * Stored messages are rendered through
+             * renderStoredMessages(), which preserves
+             * scroll position.
+             */
+
+            if (
+                Array.isArray(
+                    data.messages
+                ) &&
+                data.messages.length > 0
+            ) {
+
+                renderStoredMessages(
+                    data.messages
+                );
+
+            }
+
+
+            updateSupportUI();
+
+
+            return data;
+
+        }
+
+        catch (error) {
+
+            console.error(
+                'Support status error:',
+                error
+            );
+
+            return null;
+
+        }
+
+    }
+
+
+    /* ========================================================
+       SUPPORT UI
+       ======================================================== */
+
+    function updateSupportUI() {
+
+        const input =
+            document.getElementById(
+                'cwInput'
+            );
+
+
+        if (!input) {
+
+            return;
+
+        }
+
+
+        if (
+            supportMode ===
+            'waiting_human'
+        ) {
+
+            input.placeholder =
+                'Message the support queue...';
+
+        }
+
+        else if (
+            supportMode ===
+            'human'
+        ) {
+
+            input.placeholder =
+                'Message Barangay Staff...';
+
+        }
+
+        else {
+
+            input.placeholder =
+                'Type a message...';
+
+        }
+
+    }
+
+
+    /* ========================================================
+       REQUEST HUMAN SUPPORT
+       ======================================================== */
+
+    async function requestHumanSupport() {
+
+        if (
+            String(USER_ROLE).toLowerCase() !==
+            'resident'
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            !conversationId ||
+            Number(conversationId) <= 0
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            supportMode === 'human' ||
+            supportMode === 'waiting_human'
+        ) {
+
+            return;
+
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    SUPPORT_REQUEST_ENDPOINT,
+                    {
+                        method: 'POST',
+
+                        credentials:
+                            'same-origin',
+
+                        headers: {
+
+                            'Content-Type':
+                                'application/json',
+
+                            'Accept':
+                                'application/json',
+
+                            'X-Requested-With':
+                                'XMLHttpRequest'
+
+                        },
+
+                        body:
+                            JSON.stringify({
+
+                                conversation_id:
+                                    conversationId
+
+                            })
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                showServerError(
+                    data,
+                    response.status
+                );
+
+                return;
+
+            }
+
+
+            supportMode =
+                data.support_mode ||
+                'waiting_human';
+
+
+            updateSupportUI();
+
+
+            addMsg(
+                data.message ||
+                'Your request has been sent to the Barangay support staff. Please wait for a staff member to assist you.',
+                false,
+                'system'
+            );
+
+
+            startSupportPolling();
+
+        }
+
+        catch (error) {
+
+            console.error(
+                'Human support error:',
+                error
+            );
+
+
+            addMsg(
+                'Unable to connect you to Barangay support at this time. Please try again.',
+                false,
+                'system'
+            );
+
+        }
+
+    }
+
+
+    /* ========================================================
+       SUPPORT POLLING
+       ======================================================== */
+
+    function startSupportPolling() {
+
+        if (
+            String(USER_ROLE).toLowerCase() !==
+            'resident'
+        ) {
+
+            return;
+
+        }
+
+
+        if (supportPollingStarted) {
+
+            return;
+
+        }
+
+
+        supportPollingStarted =
+            true;
+
+
+        setInterval(
+            async function () {
+
+                if (
+                    conversationId &&
+                    Number(conversationId) > 0
+                ) {
+
+                    /*
+                     * This can continue polling.
+                     *
+                     * renderStoredMessages() will NOT
+                     * force the user to the bottom.
+                     */
+
+                    await refreshSupportStatus();
+
+                }
+
+            },
+            2500
+        );
+
+    }
+
+
+    /* ========================================================
+       HISTORY TOGGLE
        ======================================================== */
 
     window.cwToggleHistory =
@@ -1985,7 +3238,9 @@
 
 
             if (!panel) {
+
                 return;
+
             }
 
 
@@ -2004,9 +3259,13 @@
                 if (list) {
 
                     list.innerHTML = `
+
                         <div class="cw-history-loading">
+
                             Loading conversations...
+
                         </div>
+
                     `;
 
                 }
@@ -2020,13 +3279,20 @@
 
 
     /* ========================================================
-       NEW CONVERSATION
+       NEW CHAT
        ======================================================== */
 
     window.cwNewChat =
         function () {
 
-            conversationId = null;
+            conversationId =
+                null;
+
+            supportMode =
+                'ai';
+
+            assignedStaffId =
+                null;
 
 
             const panel =
@@ -2036,7 +3302,10 @@
 
 
             if (panel) {
-                panel.hidden = true;
+
+                panel.hidden =
+                    true;
+
             }
 
 
@@ -2046,112 +3315,149 @@
                 );
 
 
-            if (wrap) {
+            if (!wrap) {
 
-                wrap.innerHTML = '';
-
-
-                addMsg(
-                    "Hello! I'm the BIS Assistant 👋\n\nHow can I help you today?",
-                    false
-                );
-
-
-                const chips =
-                    document.createElement(
-                        'div'
-                    );
-
-
-                chips.className =
-                    'cw-chips';
-
-
-                chips.id =
-                    'cwChips';
-
-
-                chips.innerHTML = `
-
-                    <button
-                        type="button"
-                        class="cw-chip"
-                        onclick="cwQuick('How do I request a barangay clearance?')">
-
-                        <i class="fas fa-file-alt"></i>
-                        Request clearance
-
-                    </button>
-
-
-                    <button
-                        type="button"
-                        class="cw-chip"
-                        onclick="cwQuick('How do I create an account?')">
-
-                        <i class="fas fa-user-plus"></i>
-                        Create account
-
-                    </button>
-
-
-                    <button
-                        type="button"
-                        class="cw-chip"
-                        onclick="cwQuick('How do I file a blotter report?')">
-
-                        <i class="fas fa-book"></i>
-                        File blotter
-
-                    </button>
-
-
-                    <button
-                        type="button"
-                        class="cw-chip"
-                        onclick="cwQuick('What documents can I request?')">
-
-                        <i class="fas fa-file-contract"></i>
-                        Documents
-
-                    </button>
-
-
-                    <button
-                        type="button"
-                        class="cw-chip"
-                        onclick="cwQuick('What are the office hours?')">
-
-                        <i class="fas fa-clock"></i>
-                        Office hours
-
-                    </button>
-
-
-                    <button
-                        type="button"
-                        class="cw-chip"
-                        onclick="cwQuick('How do I reset my password?')">
-
-                        <i class="fas fa-key"></i>
-                        Reset password
-
-                    </button>
-
-                `;
-
-
-                wrap.appendChild(
-                    chips
-                );
+                return;
 
             }
 
 
-            renderConversationList(
-                document.__cwConversations ||
-                []
+            wrap.innerHTML =
+                '';
+
+
+            /*
+             * Initial AI message.
+             */
+
+            addMsg(
+                "Hello! I'm the BIS Assistant 👋\n\nHow can I help you today?",
+                false,
+                'bot',
+                false
             );
+
+
+            /*
+             * Quick chips.
+             */
+
+            const chips =
+                document.createElement(
+                    'div'
+                );
+
+
+            chips.className =
+                'cw-chips';
+
+
+            chips.id =
+                'cwChips';
+
+
+            chips.innerHTML = `
+
+                <button
+                    type="button"
+                    class="cw-chip"
+                    onclick="cwQuick('How do I request a barangay clearance?')">
+
+                    <i class="fas fa-file-alt"></i>
+
+                    Request clearance
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="cw-chip"
+                    onclick="cwQuick('How do I create an account?')">
+
+                    <i class="fas fa-user-plus"></i>
+
+                    Create account
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="cw-chip"
+                    onclick="cwQuick('How do I file a blotter report?')">
+
+                    <i class="fas fa-book"></i>
+
+                    File blotter
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="cw-chip"
+                    onclick="cwQuick('What documents can I request?')">
+
+                    <i class="fas fa-file-contract"></i>
+
+                    Documents
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="cw-chip"
+                    onclick="cwQuick('What are the office hours?')">
+
+                    <i class="fas fa-clock"></i>
+
+                    Office hours
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="cw-chip"
+                    onclick="cwQuick('How do I reset my password?')">
+
+                    <i class="fas fa-key"></i>
+
+                    Reset password
+
+                </button>
+
+            `;
+
+
+            wrap.appendChild(
+                chips
+            );
+
+
+            wrap.scrollTop =
+                wrap.scrollHeight;
+
+
+            updateSupportUI();
+
+        };
+
+
+    /* ========================================================
+       SEND
+       ======================================================== */
+
+    window.cwSend =
+        async function () {
+
+            if (chatSending) {
+
+                return;
+
+            }
 
 
             const input =
@@ -2160,63 +3466,69 @@
                 );
 
 
-            if (input) {
+            if (!input) {
 
-                input.value = '';
-
-                input.focus();
-
-            }
-
-        };
-
-
-    /* ========================================================
-       SEND MESSAGE
-       ======================================================== */
-
-    window.cwSend =
-        async function () {
-
-            if (chatSending) {
                 return;
-            }
 
-
-            const inp =
-                document.getElementById(
-                    'cwInput'
-                );
-
-
-            if (!inp) {
-                return;
             }
 
 
             const msg =
-                inp.value.trim();
+                input.value.trim();
 
 
             if (!msg) {
+
                 return;
+
             }
 
 
-            chatSending = true;
+            chatSending =
+                true;
 
 
             /*
-             * Display user message immediately.
+             * ==================================================
+             * THIS IS THE IMPORTANT PART
+             *
+             * The resident message is explicitly passed as:
+             *
+             * true, 'user'
+             *
+             * so it CANNOT become a bot message.
+             * ==================================================
              */
 
             addMsg(
                 msg,
+                true,
+                'user',
                 true
             );
 
 
-            inp.value = '';
+            /*
+             * Explicitly put the user's newly sent message
+             * at the newest position.
+             */
+
+            const messagesWrap =
+                document.getElementById(
+                    'cwMessages'
+                );
+
+
+            if (messagesWrap) {
+
+                messagesWrap.scrollTop =
+                    messagesWrap.scrollHeight;
+
+            }
+
+
+            input.value =
+                '';
 
 
             const unread =
@@ -2226,7 +3538,10 @@
 
 
             if (unread) {
-                unread.style.display = 'none';
+
+                unread.style.display =
+                    'none';
+
             }
 
 
@@ -2245,27 +3560,18 @@
                 );
 
 
-                if (
-                    conversationId !== null &&
-                    Number(conversationId) > 0
-                ) {
+                body.append(
+                    'conversation_id',
+                    conversationId
+                        ? String(conversationId)
+                        : ''
+                );
 
-                    body.append(
-                        'conversation_id',
-                        String(
-                            conversationId
-                        )
-                    );
 
-                }
-                else {
-
-                    body.append(
-                        'conversation_id',
-                        ''
-                    );
-
-                }
+                body.append(
+                    'support_mode',
+                    supportMode
+                );
 
 
                 const response =
@@ -2273,6 +3579,9 @@
                         CHAT_ENDPOINT,
                         {
                             method: 'POST',
+
+                            credentials:
+                                'same-origin',
 
                             headers: {
 
@@ -2287,24 +3596,10 @@
 
                             },
 
-                            credentials:
-                                'same-origin',
-
                             body:
                                 body.toString()
-
                         }
                     );
-
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        'Chat request failed: HTTP ' +
-                        response.status
-                    );
-
-                }
 
 
                 const contentType =
@@ -2313,44 +3608,71 @@
                     ) || '';
 
 
+                let data;
+
+
                 if (
-                    !contentType
+                    contentType
                         .toLowerCase()
-                        .includes('application/json')
+                        .includes(
+                            'application/json'
+                        )
                 ) {
 
-                    throw new Error(
-                        'Chat API did not return JSON.'
-                    );
+                    data =
+                        await response.json();
 
                 }
 
+                else {
 
-                const data =
-                    await response.json();
+                    const raw =
+                        await response.text();
+
+
+                    data = {
+
+                        success:
+                            false,
+
+                        message:
+                            raw ||
+                            'Invalid server response.'
+
+                    };
+
+                }
 
 
                 removeTyping();
 
 
                 console.log(
-                    'BIS AI Response:',
+                    'BIS Chatbot:',
                     data
                 );
 
 
-                /* =================================================
-                   SUCCESS
-                   ================================================= */
+                if (!response.ok) {
+
+                    showServerError(
+                        data,
+                        response.status
+                    );
+
+                    return;
+
+                }
+
 
                 if (
                     data &&
-                    data.success === true &&
-                    data.response
+                    data.success === true
                 ) {
 
+
                     /*
-                     * Save returned conversation ID.
+                     * Update conversation ID.
                      */
 
                     if (
@@ -2372,82 +3694,143 @@
 
 
                     /*
-                     * addMsg() automatically calls
-                     * formatAIResponse() for AI messages.
-                     *
-                     * Therefore:
-                     *
-                     * data.response
-                     *
-                     * should NOT be formatted here again.
+                     * Update support mode.
                      */
 
-                    addMsg(
-                        data.response,
-                        false
-                    );
+                    if (
+                        data.support_mode
+                    ) {
+
+                        supportMode =
+                            data.support_mode;
+
+                    }
 
 
-                    /*
-                     * Refresh recent conversations.
-                     *
-                     * This does NOT reload current messages.
-                     */
+                    updateSupportUI();
+
+
+                    /* ==========================================
+                       HUMAN SUPPORT
+                       ========================================== */
+
+                    if (
+                        data.source ===
+                            'human_support' ||
+
+                        data.source ===
+                            'human_support_queue' ||
+
+                        data.source ===
+                            'human_support_handoff' ||
+
+                        data.support_mode ===
+                            'human' ||
+
+                        data.support_mode ===
+                            'waiting_human'
+                    ) {
+
+                        if (
+                            data.response
+                        ) {
+
+                            addMsg(
+                                data.response,
+                                false,
+
+                                data.support_mode ===
+                                    'waiting_human'
+
+                                    ? 'system'
+
+                                    : 'staff'
+                            );
+
+                        }
+
+
+                        startSupportPolling();
+
+
+                        await refreshConversationList();
+
+
+                        return;
+
+                    }
+
+
+                    /* ==========================================
+                       AI RESPONSE
+                       ========================================== */
+
+                    if (
+                        data.response
+                    ) {
+
+                        addMsg(
+                            data.response,
+                            false,
+                            'bot',
+                            true
+                        );
+
+                    }
+
+                    else if (
+                        data.message
+                    ) {
+
+                        addMsg(
+                            data.message,
+                            false,
+                            'system',
+                            true
+                        );
+
+                    }
+
 
                     await refreshConversationList();
 
 
-                    /*
-                     * Highlight current conversation.
-                     */
+                }
 
-                    renderConversationList(
-                        document.__cwConversations ||
-                        []
+                else {
+
+                    showServerError(
+                        data,
+                        response.status
                     );
-
-
-                    return;
 
                 }
 
-
-                /* =================================================
-                   API ERROR
-                   ================================================= */
-
-                addMsg(
-                    'Sorry, I could not generate an answer right now. Please try again.',
-                    false
-                );
-
-
-                console.error(
-                    'Chatbot API error:',
-                    data
-                );
-
             }
+
             catch (error) {
 
                 removeTyping();
 
 
-                addMsg(
-                    'Sorry, I could not connect to the BIS AI service. Please try again.',
-                    false
-                );
-
-
                 console.error(
-                    'Chatbot request failed:',
+                    'Chatbot request error:',
                     error
                 );
 
+
+                addMsg(
+                    'Sorry, I could not connect to the BIS service. Please try again.',
+                    false,
+                    'system'
+                );
+
             }
+
             finally {
 
-                chatSending = false;
+                chatSending =
+                    false;
 
             }
 
@@ -2455,22 +3838,11 @@
 
 
     /* ========================================================
-       QUICK QUESTION
+       QUICK MESSAGE
        ======================================================== */
 
     window.cwQuick =
         function (msg) {
-
-            const chips =
-                document.getElementById(
-                    'cwChips'
-                );
-
-
-            if (chips) {
-                chips.remove();
-            }
-
 
             const input =
                 document.getElementById(
@@ -2479,7 +3851,9 @@
 
 
             if (!input) {
+
                 return;
+
             }
 
 
@@ -2493,7 +3867,7 @@
 
 
     /* ========================================================
-       OPEN CHAT
+       OPEN
        ======================================================== */
 
     window.cwOpen =
@@ -2505,10 +3879,16 @@
                 );
 
 
-            const wrap =
-                document.getElementById(
-                    'cwWrap'
-                );
+            if (!panel) {
+
+                return;
+
+            }
+
+
+            panel.classList.add(
+                'cw-open'
+            );
 
 
             const unread =
@@ -2517,72 +3897,43 @@
                 );
 
 
-            if (
-                !panel ||
-                !wrap
-            ) {
+            if (unread) {
 
-                return;
+                unread.style.display =
+                    'none';
 
             }
 
 
-            panel.classList.toggle(
-                'cw-open'
+            refreshConversationList();
+
+            refreshSupportStatus();
+
+
+            setTimeout(
+                function () {
+
+                    const input =
+                        document.getElementById(
+                            'cwInput'
+                        );
+
+
+                    if (input) {
+
+                        input.focus();
+
+                    }
+
+                },
+                150
             );
-
-
-            wrap.classList.toggle(
-                'cw-active'
-            );
-
-
-            if (
-                panel.classList.contains(
-                    'cw-open'
-                )
-            ) {
-
-                if (unread) {
-
-                    unread.style.display =
-                        'none';
-
-                }
-
-
-                /*
-                 * Refresh conversation list
-                 * whenever chatbot is opened.
-                 */
-
-                refreshConversationList();
-
-
-                setTimeout(
-                    function () {
-
-                        const input =
-                            document.getElementById(
-                                'cwInput'
-                            );
-
-
-                        if (input) {
-                            input.focus();
-                        }
-
-                    },
-                    150
-                );
-
-            }
 
         };
 
 
     /* ========================================================
-       CLOSE CHAT
+       CLOSE
        ======================================================== */
 
     window.cwClose =
@@ -2594,25 +3945,10 @@
                 );
 
 
-            const wrap =
-                document.getElementById(
-                    'cwWrap'
-                );
-
-
             if (panel) {
 
                 panel.classList.remove(
                     'cw-open'
-                );
-
-            }
-
-
-            if (wrap) {
-
-                wrap.classList.remove(
-                    'cw-active'
                 );
 
             }
@@ -2646,6 +3982,18 @@
 
 
     /* ========================================================
+       HUMAN SUPPORT BUTTON
+       ======================================================== */
+
+    window.requestBarangayStaff =
+        function () {
+
+            requestHumanSupport();
+
+        };
+
+
+    /* ========================================================
        INITIALIZE
        ======================================================== */
 
@@ -2654,6 +4002,19 @@
         function () {
 
             loadChatHistory(true);
+
+            updateSupportUI();
+
+
+            if (
+                String(USER_ROLE)
+                    .toLowerCase() ===
+                'resident'
+            ) {
+
+                startSupportPolling();
+
+            }
 
         }
     );
@@ -2673,402 +4034,3 @@
 })();
 
 </script>
-
-
-<!-- ============================================================
-     DASHBOARD TOPBAR
-     ============================================================ -->
-
-<header class="db-topbar">
-
-    <!-- Mobile Menu -->
-    <button
-        class="db-menu-toggle"
-        onclick="document.getElementById('sidebar').classList.toggle('open')"
-        aria-label="Toggle menu">
-
-        <i class="fas fa-bars"></i>
-
-    </button>
-
-
-    <!-- Page Title -->
-    <div class="db-topbar-title">
-
-        <h1>
-            <?= $pageTitle ?? 'Dashboard' ?>
-        </h1>
-
-        <span>
-            <?= date('l, F j, Y') ?>
-        </span>
-
-    </div>
-
-
-    <!-- Right Side -->
-    <div class="db-topbar-right">
-
-        <!-- ====================================================
-             NOTIFICATIONS
-             ==================================================== -->
-
-        <button
-            class="db-notif-btn"
-            onclick="window.location.href='/<?= esc((string)(session()->get('role') ?? 'resident')) ?>/notifications'"
-            aria-label="Notifications">
-
-            <i class="fas fa-bell"></i>
-
-
-            <span
-                class="db-notif-dot"
-                id="topbarNotifDot"
-                style="display:none;">
-            </span>
-
-
-            <span
-                id="topbarUnreadCount"
-                class="db-notif-count"
-                style="display:none;">
-            </span>
-
-        </button>
-
-
-        <!-- ====================================================
-             AVATAR
-             ==================================================== -->
-
-        <div
-            class="db-avatar"
-            onclick="window.location.href='/<?= esc((string)(session()->get('role') ?? 'resident')) ?>/<?= session()->get('role') === 'resident' ? 'profile' : 'settings' ?>'"
-            style="cursor:pointer;">
-
-            <?php
-
-            $avatarFile =
-                session()->get('avatar');
-
-            if (
-                $avatarFile &&
-                file_exists(
-                    FCPATH .
-                    'uploads/avatars/' .
-                    $avatarFile
-                )
-            ):
-
-            ?>
-
-                <img
-                    src="/uploads/avatars/<?= esc($avatarFile) ?>"
-                    alt="Avatar"
-                    style="
-                        width:100%;
-                        height:100%;
-                        object-fit:cover;
-                        border-radius:50%;
-                    ">
-
-            <?php else: ?>
-
-                <i class="fas fa-user"></i>
-
-            <?php endif; ?>
-
-        </div>
-
-
-        <!-- ====================================================
-             USERNAME
-             ==================================================== -->
-
-        <span class="db-username">
-
-            <?= esc(
-                (string)(
-                    session()->get('username')
-                    ?? 'User'
-                )
-            ) ?>
-
-        </span>
-
-    </div>
-
-</header>
-
-
-<!-- ============================================================
-     RESIDENT NOTIFICATIONS
-     ============================================================ -->
-
-<?php if (session()->get('role') === 'resident'): ?>
-
-<style>
-
-.db-notif-count {
-    position: absolute;
-
-    top: 2px;
-
-    right: 2px;
-
-    min-width: 17px;
-
-    height: 17px;
-
-    background: #c0392b;
-
-    color: #fff;
-
-    font-size: 10px;
-
-    font-weight: 700;
-
-    border-radius: 100px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    padding: 0 4px;
-
-    pointer-events: none;
-}
-
-</style>
-
-
-<script>
-
-(function () {
-
-    function pollUnread() {
-
-        fetch(
-            '/resident/notifications/poll',
-            {
-                credentials:
-                    'same-origin'
-            }
-        )
-
-        .then(
-            function (r) {
-                return r.json();
-            }
-        )
-
-        .then(
-            function (data) {
-
-                const count =
-                    data.unread || 0;
-
-
-                const dot =
-                    document.getElementById(
-                        'topbarNotifDot'
-                    );
-
-
-                const badge =
-                    document.getElementById(
-                        'topbarUnreadCount'
-                    );
-
-
-                if (dot) {
-
-                    dot.style.display =
-                        count > 0
-                            ? ''
-                            : 'none';
-
-                }
-
-
-                if (badge) {
-
-                    badge.textContent =
-                        count > 9
-                            ? '9+'
-                            : count;
-
-
-                    badge.style.display =
-                        count > 0
-                            ? 'flex'
-                            : 'none';
-
-                }
-
-            }
-        )
-
-        .catch(
-            function () {}
-        );
-
-    }
-
-
-    pollUnread();
-
-
-    setInterval(
-        pollUnread,
-        30000
-    );
-
-})();
-
-</script>
-
-
-<!-- ============================================================
-     SECRETARY / CAPTAIN NOTIFICATIONS
-     ============================================================ -->
-
-<?php elseif (
-    in_array(
-        session()->get('role'),
-        ['secretary', 'captain']
-    )
-): ?>
-
-<style>
-
-.db-notif-count {
-    position: absolute;
-
-    top: 2px;
-
-    right: 2px;
-
-    min-width: 17px;
-
-    height: 17px;
-
-    background: #e6a800;
-
-    color: #fff;
-
-    font-size: 10px;
-
-    font-weight: 700;
-
-    border-radius: 100px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    padding: 0 4px;
-
-    pointer-events: none;
-}
-
-</style>
-
-
-<script>
-
-(function () {
-
-    const _role =
-        '<?= esc(session()->get('role')) ?>';
-
-
-    function pollAdmin() {
-
-        fetch(
-            '/' +
-            _role +
-            '/notifications/poll',
-            {
-                credentials:
-                    'same-origin'
-            }
-        )
-
-        .then(
-            function (r) {
-                return r.json();
-            }
-        )
-
-        .then(
-            function (data) {
-
-                const count =
-                    data.unread || 0;
-
-
-                const dot =
-                    document.getElementById(
-                        'topbarNotifDot'
-                    );
-
-
-                const badge =
-                    document.getElementById(
-                        'topbarUnreadCount'
-                    );
-
-
-                if (dot) {
-
-                    dot.style.display =
-                        count > 0
-                            ? ''
-                            : 'none';
-
-                }
-
-
-                if (badge) {
-
-                    badge.textContent =
-                        count > 9
-                            ? '9+'
-                            : count;
-
-
-                    badge.style.display =
-                        count > 0
-                            ? 'flex'
-                            : 'none';
-
-                }
-
-            }
-        )
-
-        .catch(
-            function () {}
-        );
-
-    }
-
-
-    pollAdmin();
-
-
-    setInterval(
-        pollAdmin,
-        60000
-    );
-
-})();
-
-</script>
-
-<?php endif; ?>

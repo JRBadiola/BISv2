@@ -4250,3 +4250,505 @@ select.pf-input {
         grid-template-columns: 1fr 1fr 32px;
     }
 }
+
+/* ============================================================
+   RESPONSIVE FIXES ONLY
+   Existing UI/design is preserved.
+   These rules only adapt the layout for smaller screens.
+   ============================================================ */
+
+
+/* ============================================================
+   TABLETS / SMALL LAPTOPS
+   ============================================================ */
+
+@media (max-width: 1200px) {
+
+    .db-content {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .db-table-wrap {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .db-table {
+        min-width: 700px;
+    }
+
+    .pf-modal {
+        width: calc(100vw - 32px);
+        max-width: 900px;
+    }
+
+}
+
+
+/* ============================================================
+   TABLET
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+    /* Sidebar becomes off-canvas instead of shrinking content */
+    .db-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+    }
+
+    .db-sidebar.active {
+        transform: translateX(0);
+    }
+
+    /* Main content uses full width */
+    .db-main {
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        min-width: 0;
+        overflow-x: hidden;
+    }
+
+    .db-content {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* Tables remain usable through horizontal scrolling */
+    .db-table-wrap {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Charts stack vertically */
+    .db-charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Settings stack vertically */
+    .db-settings-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Chat page */
+    .db-chat-wrap {
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    /*
+       The chat sidebar is hidden only on smaller screens
+       so the actual conversation has enough width.
+    */
+    .db-chat-sidebar {
+        display: none;
+    }
+
+    .db-chat-main {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    /* Paper form modal */
+    .pf-modal {
+        width: calc(100vw - 32px);
+        max-width: 900px;
+    }
+
+    .pf-body {
+        max-width: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .pf-section {
+        max-width: calc(100% - 32px);
+    }
+
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 700px) {
+
+    .db-main {
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        min-width: 0;
+    }
+
+    .db-topbar {
+        width: 100%;
+        max-width: 100%;
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .db-content {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* Dashboard cards */
+    .db-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .db-modules {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* Prevent long titles from forcing horizontal scrolling */
+    .db-topbar-title {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .db-topbar-title h1 {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .db-topbar-right {
+        flex-shrink: 0;
+    }
+
+    /* Forms */
+    .db-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .db-form-group--full {
+        grid-column: 1;
+    }
+
+    /* Tables */
+    .db-table-wrap {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .db-table {
+        min-width: 650px;
+    }
+
+    /* Chat */
+    .db-chat-wrap {
+        width: 100%;
+        max-width: 100%;
+        height: calc(100vh - 120px);
+    }
+
+    .db-chat-main {
+        width: 100%;
+        min-width: 0;
+    }
+
+    /* Paper form */
+    .pf-cols-4,
+    .pf-cols-5 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pf-cols-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pf-children-cols {
+        grid-template-columns: 1fr 1fr 32px;
+    }
+
+    .pf-other-cols {
+        grid-template-columns: 1fr 1fr 32px;
+    }
+
+    .pf-modal {
+        width: calc(100vw - 20px);
+        max-width: 900px;
+        max-height: 94vh;
+    }
+
+    .pf-body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    /*
+       Keep the legacy paper-form table from destroying
+       the modal width. It can scroll horizontally.
+    */
+    .pf-table-head,
+    .pf-table-row {
+        min-width: 650px;
+    }
+
+}
+
+
+/* ============================================================
+   SMALL MOBILE
+   ============================================================ */
+
+@media (max-width: 600px) {
+
+    .db-topbar {
+        padding-left: 12px;
+        padding-right: 12px;
+        gap: 10px;
+    }
+
+    .db-topbar-right {
+        gap: 8px;
+    }
+
+    .db-content {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    /* Single-column dashboard cards */
+    .db-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .db-modules {
+        grid-template-columns: 1fr;
+    }
+
+    /* Toolbar */
+    .db-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .db-search-wrap {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    /* Notification panel */
+    .db-notification-panel {
+        right: -10px;
+        max-width: calc(100vw - 24px);
+    }
+
+    /* Chatbot intro */
+    .chatbot-intro-card {
+        flex-wrap: wrap;
+    }
+
+    .chatbot-intro-left {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .chatbot-open-btn {
+        max-width: 100%;
+    }
+
+    /* Chatbot topics */
+    .chatbot-topics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* Paper form modal */
+    .pf-modal {
+        width: calc(100vw - 16px);
+        max-height: 95vh;
+    }
+
+    .pf-modal-header {
+        min-width: 0;
+    }
+
+    .pf-modal-title-wrap {
+        min-width: 0;
+    }
+
+    .pf-modal-republic,
+    .pf-modal-barangay,
+    .pf-modal-formtitle {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Step tabs can scroll instead of overflowing */
+    .pf-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .pf-tab {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    /* Signatures stack */
+    .pf-cert-sig-row {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+
+/* ============================================================
+   CHATBOT - MOBILE
+   ============================================================ */
+
+@media (max-width: 480px) {
+
+    .cw-wrap {
+        right: 12px;
+        bottom: 18px;
+    }
+
+    .cw-toggle {
+        width: 56px;
+        height: 56px;
+        font-size: 22px;
+    }
+
+    .cw-panel {
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+        right: 12px;
+
+        /*
+           Prevent the chatbot from becoming taller
+           than the available mobile viewport.
+        */
+        height: min(500px, calc(100vh - 150px));
+        max-height: calc(100vh - 150px);
+    }
+
+    .cw-messages {
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .cw-body {
+        max-width: 82%;
+        min-width: 0;
+    }
+
+    .cw-bubble {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+    }
+
+    .cw-input-wrap {
+        min-width: 0;
+    }
+
+    .cw-input {
+        min-width: 0;
+    }
+
+    .cw-chips {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .cw-chip {
+        max-width: 100%;
+    }
+
+}
+
+
+/* ============================================================
+   VERY SMALL PHONES
+   ============================================================ */
+
+@media (max-width: 360px) {
+
+    .db-topbar {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .db-content {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .cw-panel {
+        width: calc(100vw - 16px);
+        max-width: calc(100vw - 16px);
+        right: 8px;
+        bottom: 76px;
+
+        height: min(500px, calc(100vh - 130px));
+        max-height: calc(100vh - 130px);
+    }
+
+    .cw-body {
+        max-width: 86%;
+    }
+
+}
+
+
+/* ============================================================
+   LANDSCAPE MOBILE / TABLET
+   ============================================================ */
+
+@media (max-width: 900px) and (orientation: landscape) {
+
+    .cw-panel {
+        height: calc(100vh - 100px);
+        max-height: calc(100vh - 100px);
+    }
+
+    .db-chat-wrap {
+        height: calc(100vh - 90px);
+    }
+
+}
+
+
+/* ============================================================
+   FINAL OVERFLOW PROTECTION
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+    html,
+    body {
+        overflow-x: hidden;
+        max-width: 100%;
+    }
+
+    .db-body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .db-main {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+}
