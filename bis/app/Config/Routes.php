@@ -1378,16 +1378,6 @@ $routes->group(
 // ══════════════════════════════════════════════════════════════════════════════
 
 $routes->get(
-    'test-env',
-    'TestEnv::index'
-);
-
-$routes->get(
-    'test-openrouter',
-    'ChatbotController::testOpenRouter'
-);
-
-$routes->get(
     'test-email',
     'EmailTestController::index'
 );

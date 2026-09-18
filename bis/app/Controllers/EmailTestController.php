@@ -15,16 +15,22 @@ class EmailTestController extends Controller
 
         $email->clear();
 
-        $email->setFrom(
-            env('email.fromEmail', ''),
-            env('email.fromName', 'BIS')
-        );
+        $fromEmail = env('email.fromEmail');
+        $fromName  = env('email.fromName', 'BIS');
 
+        // Make sure the sender email is configured
+        if (empty($fromEmail)) {
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'success' => false,
+                    'message' => 'Email configuration error: sender email is not configured.'
+                ]);
+        }
+
+        $email->setFrom($fromEmail, $fromName);
         $email->setTo($recipient);
-
-        $email->setSubject(
-            'BIS - Gmail SMTP Test'
-        );
+        $email->setSubject('BIS - Gmail SMTP Test');
 
         $email->setMessage('
             <!DOCTYPE html>
@@ -64,12 +70,7 @@ class EmailTestController extends Controller
             ->setStatusCode(500)
             ->setJSON([
                 'success' => false,
-                'message' => 'Email failed to send.',
-                'debug' => $email->printDebugger([
-                    'headers',
-                    'subject',
-                    'body'
-                ])
+                'message' => 'Email failed to send. Please check the SMTP configuration.'
             ]);
     }
 }

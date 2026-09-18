@@ -3040,40 +3040,42 @@ $latestMember = $db
                     'Requests that are already approved or rejected generally cannot be cancelled through the resident interface.'
             ],
 
-            [
-                'id' => 'blotter_filing',
-                'title' => 'Filing a Blotter Report',
-                'keys' => [
-                    'file blotter',
-                    'blotter report',
-                    'file complaint',
-                    'file a report',
-                    'report incident',
-                    'how to file blotter',
-                    'blotter'
-                ],
-                'content' =>
-                    'Residents can file a blotter report through the BIS blotter service. ' .
-                    'The report may require the complainant name, contact information, incident type, ' .
-                    'date and time, location, persons involved, and a detailed description of the incident. ' .
-                    'The barangay reviews the report and may schedule a hearing when necessary.'
-            ],
 
-            [
-                'id' => 'blotter_hearing',
-                'title' => 'Blotter Hearing and Summons',
-                'keys' => [
-                    'hearing',
-                    'blotter hearing',
-                    'hearing schedule',
-                    'summons',
-                    'when is my hearing'
-                ],
-                'content' =>
-                    'After a blotter report is reviewed, the barangay may schedule a hearing. ' .
-                    'The complainant and respondent may receive a summons containing the hearing information. ' .
-                    'Blotter and hearing processes are handled by authorized barangay personnel.'
-            ],
+[
+    'id' => 'blotter_filing',
+    'title' => 'Blotter Report',
+    'keys' => [
+        'file blotter',
+        'blotter report',
+        'file complaint',
+        'file a report',
+        'report incident',
+        'how to file blotter',
+        'blotter'
+    ],
+    'content' =>
+        'A blotter report is an official record of an incident or complaint documented by the Barangay. ' .
+        'The Barangay Secretary or Barangay Captain is responsible for assisting with the recording and management of blotter-related information. ' .
+        'If you need to report an incident or make a complaint, please proceed to the Barangay Hall and coordinate with the ' .
+        'Barangay Secretary or Barangay Captain. They will assist you with the proper procedure and documentation required for the report.'
+],
+
+[
+    'id' => 'blotter_hearing',
+    'title' => 'Blotter Hearing and Summons',
+    'keys' => [
+        'hearing',
+        'blotter hearing',
+        'hearing schedule',
+        'summons',
+        'when is my hearing'
+    ],
+    'content' =>
+        'For a blotter-related hearing or summons, please coordinate with the Barangay Secretary or Barangay Captain. ' .
+        'They can provide information regarding the hearing schedule, summons, and other procedures related to the reported incident or complaint. ' .
+        'The availability and schedule of a hearing depend on the assessment and action of the Barangay Secretary or Barangay Captain.'
+],
+
 
             [
                 'id' => 'household_number',
